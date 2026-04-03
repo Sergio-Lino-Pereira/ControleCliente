@@ -1,0 +1,202 @@
+import React, { useState, useEffect } from 'react';
+import { agendaService } from '../services/agenda.service';
+
+const DAYS_OF_WEEK = [
+    { id: 0, label: 'Domingo' },
+    { id: 1, label: 'Segunda-feira' },
+    { id: 2, label: 'Terça-feira' },
+    { id: 3, label: 'Quarta-feira' },
+    { id: 4, label: 'Quinta-feira' },
+    { id: 5, label: 'Sexta-feira' },
+    { id: 6, label: 'Sábado' },
+];
+
+export const ConfigHorarios: React.FC = () => {
+    const [slug, setSlug] = useState('');
+    const [whatsapp, setWhatsapp] = useState('');
+    const [profileSaved, setProfileSaved] = useState(false);
+    
+    // Store array of {dayOfWeek, startTime, endTime}
+    const [hours, setHours] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        agendaService.getBusinessHours().then(res => {
+            setHours(res.data.hours || []);
+            setSlug(res.data.slug || '');
+            setWhatsapp(res.data.whatsapp || '');
+            setLoading(false);
+        });
+    }, []);
+
+    const handleSaveProfile = async () => {
+        try {
+            await agendaService.updateSlug(slug);
+            await agendaService.updateWhatsapp(whatsapp);
+            setProfileSaved(true);
+            setTimeout(() => setProfileSaved(false), 3000);
+        } catch (e) {
+            alert('Erro ao salvar Perfil.');
+        }
+    };
+
+    const handleAddSlot = (dayId: number) => {
+        setHours([...hours, { dayOfWeek: dayId, startTime: '08:00', endTime: '12:00', whatsappEnabled: false }]);
+    };
+
+    const handleRemoveSlot = (indexToRemove: number) => {
+        setHours(hours.filter((_, idx) => idx !== indexToRemove));
+    };
+
+    const handleTimeChange = (indexToUpdate: number, field: 'startTime' | 'endTime', value: string) => {
+        setHours(hours.map((h, idx) => idx === indexToUpdate ? { ...h, [field]: value } : h));
+    };
+
+    const handleToggleWhatsapp = (indexToUpdate: number, value: boolean) => {
+        setHours(hours.map((h, idx) => idx === indexToUpdate ? { ...h, whatsappEnabled: value } : h));
+    };
+
+    const handleSaveHours = async () => {
+        try {
+            await agendaService.updateBusinessHours(hours);
+            alert('Horários salvos com sucesso!');
+        } catch(e) {
+            alert('Erro ao salvar horários.');
+        }
+    };
+
+    if (loading) return <div>Carregando...</div>;
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">Configurações da Agenda</h1>
+
+            <div className="card mb-8">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-4">Seu Perfil de Agendamento</h2>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Crie um endereço único (slug)</label>
+                        <div className="flex rounded-md shadow-sm">
+                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                                seu-site.com/agendar/
+                            </span>
+                            <input
+                                type="text"
+                                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="joao-silva"
+                                value={slug}
+                                onChange={e => setSlug(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Seu WhatsApp (Ex: 5511999999999)</label>
+                        <input
+                            type="text"
+                            className="input-field w-full"
+                            placeholder="Somente números. Ex: 5511988887777"
+                            value={whatsapp}
+                            onChange={e => setWhatsapp(e.target.value.replace(/\D/g, ''))}
+                        />
+                    </div>
+                </div>
+                <div className="mt-6 flex items-center justify-end gap-4">
+                    {profileSaved && <span className="text-green-600 font-medium">Perfil atualizado com sucesso!</span>}
+                    <button onClick={handleSaveProfile} className="btn-primary">
+                        Salvar Informações
+                    </button>
+                </div>
+            </div>
+
+            <div className="card">
+                <h2 className="text-xl font-semibold mb-6 border-b pb-4">Horários de Atendimento</h2>
+                <p className="text-sm text-gray-600 mb-6">Você pode adicionar vários intervalos num único dia (por exemplo, adicionar um horário de 08:00 às 12:00 e outro de 14:00 às 18:00). Os agendamentos usarão frações de 30 minutos.</p>
+                
+                <div className="space-y-6 mb-8">
+                    {DAYS_OF_WEEK.map(day => {
+                        const daySlots = hours
+                            .map((h, idx) => ({ ...h, originalIndex: idx }))
+                            .filter(h => h.dayOfWeek === day.id);
+
+                        const isActive = daySlots.length > 0;
+
+                        return (
+                            <div key={day.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-4 w-48">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isActive} 
+                                            onChange={() => {
+                                                if (isActive) {
+                                                    setHours(hours.filter(h => h.dayOfWeek !== day.id));
+                                                } else {
+                                                    handleAddSlot(day.id);
+                                                }
+                                            }} 
+                                            className="h-5 w-5 text-blue-600 rounded cursor-pointer"
+                                        />
+                                        <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{day.label}</span>
+                                    </div>
+                                    
+                                    {isActive && (
+                                        <button onClick={() => handleAddSlot(day.id)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                            + Adicionar Intervalo
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                {isActive ? (
+                                    <div className="pl-10 space-y-3">
+                                        {daySlots.map((slot, index) => (
+                                            <div key={slot.originalIndex} className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+                                                <span className="text-xs font-semibold text-gray-400 w-16 uppercase">Turno {index + 1}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-500">Início</span>
+                                                    <input 
+                                                        type="time" 
+                                                        value={slot.startTime} 
+                                                        onChange={e => handleTimeChange(slot.originalIndex, 'startTime', e.target.value)}
+                                                        className="input-field py-1"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-500">Fim</span>
+                                                    <input 
+                                                        type="time" 
+                                                        value={slot.endTime} 
+                                                        onChange={e => handleTimeChange(slot.originalIndex, 'endTime', e.target.value)}
+                                                        className="input-field py-1"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 ml-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!slot.whatsappEnabled}
+                                                        onChange={e => handleToggleWhatsapp(slot.originalIndex, e.target.checked)}
+                                                        className="h-4 w-4 text-green-600 rounded cursor-pointer"
+                                                    />
+                                                    <span className="text-sm font-medium text-gray-600">Habilitar WhatsApp</span>
+                                                </div>
+                                                <button onClick={() => handleRemoveSlot(slot.originalIndex)} className="ml-auto text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-full" title="Remover Horário">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="pl-10 text-sm text-gray-400 italic">Folga / Indisponível</div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="flex justify-end">
+                    <button onClick={handleSaveHours} className="btn-primary px-8 text-lg py-3">
+                        Salvar Minha Configuração
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};

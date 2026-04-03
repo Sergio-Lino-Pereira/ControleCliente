@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  // Scheduling Feature
+  slug          String?  @unique
+  whatsapp      String?
+
+  businessHours BusinessHours[]
+  appointments  Appointment[]
+
+  @@map("users")
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
+}
+
+model BusinessHours {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String   // e.g., "09:00"
+  endTime   String   // e.g., "18:00"
+  whatsappEnabled Boolean @default(false)
+  
+  @@map("business_hours")
+}
+
+model Appointment {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime
+  startTime   String   // e.g., "14:00"
+  endTime     String   // e.g., "10:00"
+  
+  clientName String
+  clientEmail String
+  clientWhatsapp String? // Added for WhatsApp integration
+
+  status     String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("appointments")
+}
