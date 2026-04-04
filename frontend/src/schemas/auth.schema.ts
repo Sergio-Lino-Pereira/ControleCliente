@@ -9,6 +9,23 @@ export const registerSchema = z.object({
         .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
         .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
     whatsapp: z.string().min(10, 'WhatsApp deve ter pelo menos 10 dígitos numéricos'),
+    coupon: z.string().optional(),
+    cardNumber: z.string().optional(),
+    cardExpiry: z.string().optional(),
+    cardCvv: z.string().optional(),
+}).superRefine((data, ctx) => {
+    const isFree = data.coupon?.toUpperCase() === 'GRATIS100';
+    if (!isFree) {
+        if (!data.cardNumber || data.cardNumber.replace(/\D/g, '').length < 15) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Número de cartão inválido', path: ['cardNumber'] });
+        }
+        if (!data.cardExpiry || data.cardExpiry.length < 5) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Validade inválida (MM/AA)', path: ['cardExpiry'] });
+        }
+        if (!data.cardCvv || data.cardCvv.length < 3) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CVV inválido', path: ['cardCvv'] });
+        }
+    }
 });
 
 export const loginSchema = z.object({

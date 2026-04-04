@@ -34,9 +34,8 @@ export class ScheduleController {
             const { PrismaClient } = require('@prisma/client');
             const prisma = new PrismaClient();
             const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-            const rawUsers = await prisma.$queryRaw<any[]>`SELECT whatsapp FROM users WHERE id = ${req.user!.id}::uuid LIMIT 1`;
             
-            return res.json({ success: true, data: { hours, slug: user?.slug, whatsapp: rawUsers[0]?.whatsapp || null } });
+            return res.json({ success: true, data: { hours, slug: user?.slug, whatsapp: user?.whatsapp || null } });
         } catch (error) {
             console.error('[ScheduleController] Erro no getBusinessHours:', error);
             return res.status(500).json({ success: false, message: 'Erro ao buscar horários' });

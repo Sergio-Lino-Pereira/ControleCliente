@@ -14,17 +14,28 @@ export const Cadastro: React.FC = () => {
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
     } = useForm<RegisterFormData>({
         resolver: zodResolver(registerSchema),
     });
+
+    const couponValue = watch('coupon');
+    const isFree = couponValue?.toUpperCase() === 'GRATIS100';
 
     const onSubmit = async (data: RegisterFormData) => {
         setIsSubmitting(true);
         setRegisterError('');
 
         try {
-            await registerUser(data);
+            // Append 55 to whatsapp since the UI isolates the prefix
+            const cleanWhatsapp = data.whatsapp.replace(/\D/g, '');
+            const finalData = {
+                ...data,
+                whatsapp: `55${cleanWhatsapp}`
+            };
+
+            await registerUser(finalData);
             navigate('/restricted');
         } catch (error: any) {
             setRegisterError(
@@ -39,8 +50,8 @@ export const Cadastro: React.FC = () => {
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
             <div className="max-w-md w-full">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Cadastro</h1>
-                    <p className="text-gray-600">Crie sua conta gratuitamente</p>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Cadastro Profissional</h1>
+                    <p className="text-gray-600">Crie sua conta e configure sua agenda</p>
                 </div>
 
                 <div className="card">
@@ -75,21 +86,26 @@ export const Cadastro: React.FC = () => {
 
                         <div>
                             <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-2">
-                                Receber clientes no WhatsApp (Ex: 5511999999999)
+                                Receber clientes no WhatsApp
                             </label>
-                            <input
-                                {...register('whatsapp')}
-                                type="text"
-                                id="whatsapp"
-                                className="input-field"
-                                placeholder="Apenas números"
-                            />
+                            <div className="flex">
+                                <span className="inline-flex items-center px-4 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 font-medium sm:text-sm">
+                                    +55
+                                </span>
+                                <input
+                                    {...register('whatsapp')}
+                                    type="text"
+                                    id="whatsapp"
+                                    className="flex-1 input-field !rounded-l-none"
+                                    placeholder="DDD e Número (ex: 11999999999)"
+                                />
+                            </div>
                             {errors.whatsapp && <p className="error-text">{errors.whatsapp.message}</p>}
                         </div>
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Senha
+                                Senha de Acesso
                             </label>
                             <input
                                 {...register('password')}
@@ -102,6 +118,81 @@ export const Cadastro: React.FC = () => {
                             <p className="text-xs text-gray-500 mt-1">
                                 Mínimo 8 caracteres, incluindo maiúscula, minúscula e número
                             </p>
+                        </div>
+
+                        <hr className="my-6 border-gray-200" />
+                        
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Pagamento da Assinatura</h3>
+                            
+                            <div className="mb-4">
+                                <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Tem um Cupom de Desconto?
+                                </label>
+                                <input
+                                    {...register('coupon')}
+                                    type="text"
+                                    id="coupon"
+                                    className="input-field uppercase"
+                                    placeholder="Ex: GRATIS100"
+                                />
+                            </div>
+
+                            {!isFree && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Número do Cartão de Crédito
+                                        </label>
+                                        <input
+                                            {...register('cardNumber')}
+                                            type="text"
+                                            id="cardNumber"
+                                            maxLength={19}
+                                            className="input-field"
+                                            placeholder="0000 0000 0000 0000"
+                                        />
+                                        {errors.cardNumber && <p className="error-text">{errors.cardNumber.message}</p>}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label htmlFor="cardExpiry" className="block text-sm font-medium text-gray-700 mb-2">
+                                                Validade
+                                            </label>
+                                            <input
+                                                {...register('cardExpiry')}
+                                                type="text"
+                                                id="cardExpiry"
+                                                maxLength={5}
+                                                className="input-field"
+                                                placeholder="MM/AA"
+                                            />
+                                            {errors.cardExpiry && <p className="error-text">{errors.cardExpiry.message}</p>}
+                                        </div>
+                                        <div>
+                                            <label htmlFor="cardCvv" className="block text-sm font-medium text-gray-700 mb-2">
+                                                CVV
+                                            </label>
+                                            <input
+                                                {...register('cardCvv')}
+                                                type="text"
+                                                id="cardCvv"
+                                                maxLength={4}
+                                                className="input-field"
+                                                placeholder="123"
+                                            />
+                                            {errors.cardCvv && <p className="error-text">{errors.cardCvv.message}</p>}
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2 text-center">🔐 Transação Simulada e Segura</p>
+                                </div>
+                            )}
+
+                            {isFree && (
+                                <div className="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded text-sm text-center font-medium">
+                                    ✅ Cupom aplicado! Assinatura Gratuita.
+                                </div>
+                            )}
                         </div>
 
                         {registerError && (

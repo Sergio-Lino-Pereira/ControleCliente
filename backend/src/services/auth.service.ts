@@ -8,13 +8,28 @@ const SALT_ROUNDS = 12;
 
 export class AuthService {
     async register(data: RegisterInput) {
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-            where: { email: data.email },
+        // Check if user already exists by email, name, or whatsapp
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: data.email },
+                    { name: data.name },
+                    { whatsapp: data.whatsapp }
+                ]
+            }
         });
 
         if (existingUser) {
-            throw new Error('Email já cadastrado');
+            if (existingUser.email === data.email) {
+                throw new Error('Email já cadastrado');
+            }
+            if (existingUser.whatsapp === data.whatsapp) {
+                throw new Error('Este Whatsapp já está cadastrado em outro perfil');
+            }
+            if (existingUser.name === data.name) {
+                throw new Error('Já existe um profissional com este mesmo nome');
+            }
+            throw new Error('Usuário já cadastrado');
         }
 
         // Hash password

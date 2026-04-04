@@ -200,6 +200,23 @@ export class BookingService {
         const [year, month, day] = data.date.split('-');
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
+        // Check for active existing appointments for this client
+        const todayStr = new Date().toISOString().split('T')[0];
+        const [tyear, tmonth, tday] = todayStr.split('-');
+        const today = new Date(parseInt(tyear), parseInt(tmonth) - 1, parseInt(tday));
+
+        const existingAppt = await prisma.appointment.findFirst({
+            where: {
+                clientWhatsapp: data.clientWhatsapp,
+                status: { in: ['CONFIRMED', 'PENDING'] },
+                date: { gte: today }
+            }
+        });
+
+        if (existingAppt) {
+            throw new Error(`Este número de WhatsApp já possui um agendamento ativo para o dia ${existingAppt.date.toISOString().split('T')[0].split('-').reverse().join('/')}. Aguarde a conclusão ou cancele-o para agendar novamente.`);
+        }
+
         let endTimeStr = '23:59';
         const startH = parseInt(data.startTime.split(':')[0]);
         endTimeStr = `${(startH + 1).toString().padStart(2, '0')}:${data.startTime.split(':')[1]}`;

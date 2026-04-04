@@ -4,7 +4,7 @@ import { BookingService } from '../services/booking.service';
 const bookingService = new BookingService();
 
 export class BookingController {
-    async getProfessionalsList(req: Request, res: Response) {
+    async getProfessionalsList(_req: Request, res: Response) {
         try {
             const professionals = await bookingService.getProfessionalsList();
             return res.json({ success: true, data: { professionals } });
@@ -52,11 +52,14 @@ export class BookingController {
     async createAppointment(req: Request, res: Response) {
         try {
             const { date, startTime, clientName, clientEmail, clientWhatsapp } = req.body;
-            const appointment = await bookingService.createAppointment(req.params.slug, {
+            const appointment = await bookingService.createAppointment(req.params.slug as string, {
                 date, startTime, clientName, clientEmail, clientWhatsapp
             });
             return res.status(201).json({ success: true, data: { appointment } });
         } catch (error) {
+            if (error instanceof Error) {
+                return res.status(400).json({ success: false, message: error.message });
+            }
             return res.status(500).json({ success: false, message: 'Erro ao criar agendamento' });
         }
     }

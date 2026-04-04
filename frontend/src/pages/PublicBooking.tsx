@@ -65,7 +65,7 @@ export const PublicBooking: React.FC = () => {
                 startTime: selectedSlot,
                 clientName,
                 clientEmail,
-                clientWhatsapp
+                clientWhatsapp: `55${clientWhatsapp}`
             });
             setBookingSuccess(true);
         } catch (err) {
@@ -280,7 +280,12 @@ export const PublicBooking: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">WhatsApp</label>
-                                <input required type="text" className="input-field bg-white py-3 text-lg border-2 w-full" value={clientWhatsapp} onChange={e => setClientWhatsapp(e.target.value.replace(/\D/g, ''))} placeholder="5511999999999" />
+                                <div className="flex">
+                                    <span className="inline-flex items-center px-4 rounded-l-md border-2 border-r-0 border-gray-300 bg-gray-50 text-gray-600 font-bold text-lg">
+                                        +55
+                                    </span>
+                                    <input required type="text" className="flex-1 input-field bg-white py-3 text-lg border-2 !rounded-l-none" value={clientWhatsapp} onChange={e => setClientWhatsapp(e.target.value.replace(/\D/g, ''))} placeholder="DDD + Número" />
+                                </div>
                             </div>
                         </div>
                         {error && <p className="text-red-600 mt-4 font-bold text-center bg-red-50 py-3 rounded-lg border border-red-200">{error}</p>}
