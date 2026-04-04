@@ -12,6 +12,7 @@ import { PublicBooking } from './pages/PublicBooking';
 import { ConfigHorarios } from './pages/ConfigHorarios';
 import { Agenda } from './pages/Agenda';
 import { Profissionais } from './pages/Profissionais';
+import { AdminProfissionais } from './pages/AdminProfissionais';
 
 function App() {
     return (
@@ -50,6 +51,14 @@ function App() {
                             }
                         />
                         <Route path="/agendar/:slug" element={<PublicBooking />} />
+                        <Route
+                            path="/admin/profissionais"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminProfissionais />
+                                </ProtectedRoute>
+                            }
+                        />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </Layout>

@@ -74,6 +74,11 @@ export const Restricted: React.FC = () => {
                         <Link to="/config-horarios" className="block w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium">
                             ⚙️ Horários de Atendimento & Link Público
                         </Link>
+                        {user?.email === 'linopereira.sergio@gmail.com' && (
+                            <Link to="/admin/profissionais" className="block w-full text-left px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-medium text-red-700">
+                                🛡️ Gerenciar Profissionais (Admin)
+                            </Link>
+                        )}
                         <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium">
                             👥 Gerenciar Clientes (Em Breve)
                         </button>

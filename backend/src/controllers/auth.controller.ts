@@ -27,10 +27,7 @@ export class AuthController {
         } catch (error) {
             logger.error('Registration error:', error);
 
-            if (error instanceof Error && (
-                error.message.includes('já cadastrado') ||
-                error.message.includes('mesmo nome')
-            )) {
+            if (error instanceof Error) {
                 return res.status(409).json({
                     success: false,
                     message: error.message,
