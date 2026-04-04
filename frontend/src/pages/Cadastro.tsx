@@ -21,7 +21,7 @@ export const Cadastro: React.FC = () => {
     });
 
     const couponValue = watch('coupon');
-    const isFree = couponValue?.toUpperCase() === 'GRATIS';
+    const isFree = couponValue?.toUpperCase() === 'GRATIS100';
 
     const onSubmit = async (data: RegisterFormData) => {
         setIsSubmitting(true);
