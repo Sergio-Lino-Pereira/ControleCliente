@@ -20,11 +20,11 @@ export const setupSecurity = (app: Express) => {
 
 // Rate limiter for authentication endpoints
 export const authRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 30 * 1000, // 30 seconds
     max: 5, // Limit each IP to 5 requests per windowMs
     message: {
         success: false,
-        message: 'Muitas tentativas. Por favor, tente novamente em 15 minutos.',
+        message: 'Muitas tentativas. Por favor, tente novamente em 30 segundos.',
     },
     standardHeaders: true,
     legacyHeaders: false,

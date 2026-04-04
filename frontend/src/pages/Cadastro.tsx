@@ -21,7 +21,7 @@ export const Cadastro: React.FC = () => {
     });
 
     const couponValue = watch('coupon');
-    const isFree = couponValue?.toUpperCase() === 'GRATIS100';
+    const isFree = couponValue?.toUpperCase() === 'GRATIS';
 
     const onSubmit = async (data: RegisterFormData) => {
         setIsSubmitting(true);
@@ -134,7 +134,7 @@ export const Cadastro: React.FC = () => {
                                     type="text"
                                     id="coupon"
                                     className="input-field uppercase"
-                                    placeholder="Ex: GRATIS100"
+                                    placeholder="Ex: GRATIS"
                                 />
                             </div>
 

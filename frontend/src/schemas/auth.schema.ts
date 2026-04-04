@@ -14,7 +14,7 @@ export const registerSchema = z.object({
     cardExpiry: z.string().optional(),
     cardCvv: z.string().optional(),
 }).superRefine((data, ctx) => {
-    const isFree = data.coupon?.toUpperCase() === 'GRATIS100';
+    const isFree = data.coupon?.toUpperCase() === 'GRATIS';
     if (!isFree) {
         if (!data.cardNumber || data.cardNumber.replace(/\D/g, '').length < 15) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Número de cartão inválido', path: ['cardNumber'] });
