@@ -5,6 +5,7 @@ import contactRoutes from './contact.routes';
 import scheduleRoutes from './schedule.routes';
 import bookingRoutes from './booking.routes';
 import adminRoutes from './admin.routes';
+import professionRoutes from './profession.routes';
 
 const router = Router();
 const healthController = new HealthController();
@@ -18,5 +19,6 @@ router.use('/contact', contactRoutes);
 router.use('/schedule', scheduleRoutes);
 router.use('/public/booking', bookingRoutes);
 router.use('/admin', adminRoutes);
+router.use('/professions', professionRoutes);
 
 export default router;

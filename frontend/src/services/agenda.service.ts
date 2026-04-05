@@ -27,6 +27,11 @@ export const agendaService = {
         const response = await api.put(`/schedule/appointments/${id}/status`, { status });
         return response.data;
     },
+    async updateSettings(settings: { showInDirectory?: boolean; autoConfirm?: boolean }) {
+        const response = await api.put('/schedule/settings', settings);
+        return response.data;
+    },
+
 
     // Public
     async getProfessionalsList() {

@@ -6,15 +6,15 @@ const whatsappService = new WhatsappService();
 
 export class BookingService {
     async getProfessionalsList() {
-        const users = await prisma.user.findMany({
-            where: { slug: { not: null } },
-            select: { id: true, name: true, slug: true }
-        });
-        const rawUsers = await prisma.$queryRaw<any[]>`SELECT id, whatsapp FROM users WHERE slug IS NOT NULL`;
-        return users.map(u => ({
-            ...u,
-            whatsapp: rawUsers.find(ru => ru.id === u.id)?.whatsapp || null
-        }));
+        const rawUsers = await prisma.$queryRaw<any[]>`
+            SELECT id, name, slug, whatsapp, profession, category, 
+                   show_in_directory as "showInDirectory", 
+                   auto_confirm as "autoConfirm",
+                   status
+            FROM users 
+            WHERE slug IS NOT NULL
+        `;
+        return rawUsers;
     }
 
     async getProfessionalBySlug(slug: string) {

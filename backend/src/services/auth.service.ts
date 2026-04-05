@@ -5,6 +5,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/jwt.util';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 12;
+const OUTRAS_CATEGORY = 'Outros';
 
 export class AuthService {
     async register(data: RegisterInput) {
@@ -35,18 +36,29 @@ export class AuthService {
         // Hash password
         const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
+        // Determine status: Outros category requires admin approval
+        const category = (data as any).category as string | undefined;
+        const profession = (data as any).profession as string | undefined;
+        const status = category === OUTRAS_CATEGORY ? 'PENDING_APPROVAL' : 'ACTIVE';
+
         // Create user
         const user = await prisma.user.create({
             data: {
                 name: data.name,
                 email: data.email,
                 passwordHash,
-                whatsapp: data.whatsapp
+                whatsapp: data.whatsapp,
+                profession: profession || null,
+                category: category || null,
+                status,
             },
             select: {
                 id: true,
                 name: true,
                 email: true,
+                profession: true,
+                category: true,
+                status: true,
                 createdAt: true,
             },
         });
@@ -94,6 +106,12 @@ export class AuthService {
                 id: true,
                 name: true,
                 email: true,
+                profession: true,
+                category: true,
+                status: true,
+                showInDirectory: true,
+                autoConfirm: true,
+                whatsapp: true,
                 createdAt: true,
             },
         });

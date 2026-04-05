@@ -15,6 +15,9 @@ export const ConfigHorarios: React.FC = () => {
     const [slug, setSlug] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [profileSaved, setProfileSaved] = useState(false);
+    const [showInDirectory, setShowInDirectory] = useState(true);
+    const [autoConfirm, setAutoConfirm] = useState(false);
+    const [settingsSaved, setSettingsSaved] = useState(false);
     
     // Store array of {dayOfWeek, startTime, endTime}
     const [hours, setHours] = useState<any[]>([]);
@@ -25,9 +28,21 @@ export const ConfigHorarios: React.FC = () => {
             setHours(res.data.hours || []);
             setSlug(res.data.slug || '');
             setWhatsapp(res.data.whatsapp || '');
+            setShowInDirectory(res.data.showInDirectory ?? true);
+            setAutoConfirm(res.data.autoConfirm ?? false);
             setLoading(false);
         });
     }, []);
+
+    const handleSaveSettings = async () => {
+        try {
+            await agendaService.updateSettings({ showInDirectory, autoConfirm });
+            setSettingsSaved(true);
+            setTimeout(() => setSettingsSaved(false), 3000);
+        } catch {
+            alert('Erro ao salvar configurações.');
+        }
+    };
 
     const handleSaveProfile = async () => {
         try {
@@ -70,6 +85,41 @@ export const ConfigHorarios: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Configurações da Agenda</h1>
+
+            {/* Directory & Auto-Confirm Settings */}
+            <div className="card mb-8">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-4">Preferências de Atendimento</h2>
+                <div className="space-y-4">
+                    <label className="flex items-center justify-between cursor-pointer">
+                        <div>
+                            <p className="font-medium text-gray-900">Aparecer na lista de Profissionais</p>
+                            <p className="text-sm text-gray-500">Torne seu perfil visível para novos clientes pelo diretório público</p>
+                        </div>
+                        <div
+                            onClick={() => setShowInDirectory(!showInDirectory)}
+                            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${showInDirectory ? 'bg-blue-600' : 'bg-gray-300'}`}
+                        >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${showInDirectory ? 'translate-x-7' : 'translate-x-1'}`} />
+                        </div>
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                        <div>
+                            <p className="font-medium text-gray-900">Confirmar agendamentos automaticamente</p>
+                            <p className="text-sm text-gray-500">O cliente agenda e já recebe confirmação via WhatsApp sem revisão manual</p>
+                        </div>
+                        <div
+                            onClick={() => setAutoConfirm(!autoConfirm)}
+                            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${autoConfirm ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoConfirm ? 'translate-x-7' : 'translate-x-1'}`} />
+                        </div>
+                    </label>
+                </div>
+                <div className="mt-6 flex items-center justify-end gap-4">
+                    {settingsSaved && <span className="text-green-600 font-medium">Preferências salvas!</span>}
+                    <button onClick={handleSaveSettings} className="btn-primary">Salvar Preferências</button>
+                </div>
+            </div>
 
             <div className="card mb-8">
                 <h2 className="text-xl font-semibold mb-4 border-b pb-4">Seu Perfil de Agendamento</h2>

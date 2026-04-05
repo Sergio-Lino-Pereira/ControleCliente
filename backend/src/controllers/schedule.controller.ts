@@ -35,7 +35,18 @@ export class ScheduleController {
             const prisma = new PrismaClient();
             const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
             
-            return res.json({ success: true, data: { hours, slug: user?.slug, whatsapp: user?.whatsapp || null } });
+            return res.json({
+                success: true,
+                data: {
+                    hours,
+                    slug: user?.slug,
+                    whatsapp: user?.whatsapp || null,
+                    showInDirectory: user?.showInDirectory ?? true,
+                    autoConfirm: user?.autoConfirm ?? false,
+                    profession: user?.profession || null,
+                    category: user?.category || null,
+                }
+            });
         } catch (error) {
             console.error('[ScheduleController] Erro no getBusinessHours:', error);
             return res.status(500).json({ success: false, message: 'Erro ao buscar horários' });
@@ -71,6 +82,24 @@ export class ScheduleController {
             return res.json({ success: true, data: { appointment: updated } });
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Erro ao atualizar agendamento' });
+        }
+    }
+
+    async updateSettings(req: Request, res: Response) {
+        try {
+            const { showInDirectory, autoConfirm } = req.body;
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+            await prisma.user.update({
+                where: { id: req.user!.id },
+                data: {
+                    ...(showInDirectory !== undefined ? { showInDirectory } : {}),
+                    ...(autoConfirm !== undefined ? { autoConfirm } : {}),
+                },
+            });
+            return res.json({ success: true, message: 'Configurações atualizadas' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Erro ao atualizar configurações' });
         }
     }
 }

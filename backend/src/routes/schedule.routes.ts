@@ -13,5 +13,6 @@ router.get('/business-hours', scheduleController.getBusinessHours.bind(scheduleC
 router.put('/business-hours', scheduleController.updateBusinessHours.bind(scheduleController));
 router.get('/appointments', scheduleController.getAppointments.bind(scheduleController));
 router.put('/appointments/:id/status', scheduleController.updateAppointmentStatus.bind(scheduleController));
+router.put('/settings', scheduleController.updateSettings.bind(scheduleController));
 
 export default router;

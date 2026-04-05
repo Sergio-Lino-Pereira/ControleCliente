@@ -23,11 +23,48 @@ model User {
   slug          String?  @unique
   whatsapp      String?
 
+  // Directory & Settings
+  showInDirectory Boolean @default(true) @map("show_in_directory")
+  autoConfirm     Boolean @default(false) @map("auto_confirm")
+  profession      String?
+  category        String?
+  status          String  @default("ACTIVE") // ACTIVE | PENDING_APPROVAL
+
   businessHours BusinessHours[]
   appointments  Appointment[]
+  services      UserService[]
 
   @@map("users")
 }
+
+model Profession {
+  id       String              @id @default(uuid())
+  name     String
+  category String
+  services ProfessionService[]
+
+  @@map("professions")
+}
+
+model ProfessionService {
+  id           String     @id @default(uuid())
+  professionId String     @map("profession_id")
+  profession   Profession @relation(fields: [professionId], references: [id], onDelete: Cascade)
+  name         String
+
+  @@map("profession_services")
+}
+
+model UserService {
+  id     String  @id @default(uuid())
+  userId String  @map("user_id")
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  price  Decimal? @db.Decimal(10, 2)
+
+  @@map("user_services")
+}
+
 
 model ContactMessage {
   id        String   @id @default(uuid())
