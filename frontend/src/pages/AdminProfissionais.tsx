@@ -12,6 +12,8 @@ interface Professional {
     whatsapp: string | null;
     slug: string | null;
     createdAt: string;
+    status: 'ACTIVE' | 'PENDING_APPROVAL';
+    profession: string | null;
 }
 
 export const AdminProfissionais: React.FC = () => {
@@ -42,7 +44,18 @@ export const AdminProfissionais: React.FC = () => {
         }
     };
 
+    const handleApprove = async (id: string) => {
+        try {
+            await api.put(`/admin/users/${id}/approve`);
+            setProfessionals(prev => prev.map(p => p.id === id ? { ...p, status: 'ACTIVE' } : p));
+            setMessage('Profissional aprovado com sucesso!');
+        } catch {
+            setMessage('Erro ao aprovar profissional.');
+        }
+    };
+
     const handleDelete = async (id: string) => {
+// ... existing delete logic ...
         setDeleting(true);
         try {
             await api.delete(`/admin/users/${id}`);
@@ -83,10 +96,15 @@ export const AdminProfissionais: React.FC = () => {
             ) : (
                 <div className="space-y-4">
                     {professionals.map(prof => (
-                        <div key={prof.id} className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div key={prof.id} className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-4" style={{ borderLeftColor: prof.status === 'ACTIVE' ? '#10b981' : '#f59e0b' }}>
                             <div className="space-y-1">
-                                <p className="font-semibold text-gray-900">{prof.name}</p>
-                                <p className="text-sm text-gray-500">{prof.email}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-gray-900">{prof.name}</p>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${prof.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {prof.status === 'ACTIVE' ? 'Ativo' : 'Pendente'}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-gray-500">{prof.email} &bull; <span className="font-medium text-blue-600">{prof.profession || 'Sem profissão'}</span></p>
                                 <p className="text-sm text-gray-400">
                                     WhatsApp: {prof.whatsapp || '—'} &nbsp;|&nbsp; Slug: {prof.slug || '—'}
                                 </p>
@@ -95,30 +113,41 @@ export const AdminProfissionais: React.FC = () => {
                                 </p>
                             </div>
 
-                            {confirmDeleteId === prof.id ? (
-                                <div className="flex gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                {prof.status === 'PENDING_APPROVAL' && (
                                     <button
-                                        onClick={() => handleDelete(prof.id)}
-                                        disabled={deleting}
-                                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                        onClick={() => handleApprove(prof.id)}
+                                        className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 font-bold shadow-sm"
                                     >
-                                        {deleting ? 'Excluindo...' : 'Confirmar'}
+                                        ✅ Aprovar
                                     </button>
+                                )}
+
+                                {confirmDeleteId === prof.id ? (
+                                    <div className="flex gap-2 flex-shrink-0">
+                                        <button
+                                            onClick={() => handleDelete(prof.id)}
+                                            disabled={deleting}
+                                            className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 font-bold"
+                                        >
+                                            {deleting ? 'Excluindo...' : 'Confirmar'}
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmDeleteId(null)}
+                                            className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                ) : (
                                     <button
-                                        onClick={() => setConfirmDeleteId(null)}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                                        onClick={() => setConfirmDeleteId(prof.id)}
+                                        className="px-4 py-2 bg-red-50 text-red-600 text-sm rounded-lg hover:bg-red-100 flex-shrink-0 font-medium"
                                     >
-                                        Cancelar
+                                        🗑️ Excluir
                                     </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setConfirmDeleteId(prof.id)}
-                                    className="px-4 py-2 bg-red-50 text-red-600 text-sm rounded-lg hover:bg-red-100 flex-shrink-0"
-                                >
-                                    🗑️ Excluir
-                                </button>
-                            )}
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -126,3 +155,4 @@ export const AdminProfissionais: React.FC = () => {
         </div>
     );
 };
+

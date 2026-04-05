@@ -14,5 +14,7 @@ router.put('/business-hours', scheduleController.updateBusinessHours.bind(schedu
 router.get('/appointments', scheduleController.getAppointments.bind(scheduleController));
 router.put('/appointments/:id/status', scheduleController.updateAppointmentStatus.bind(scheduleController));
 router.put('/settings', scheduleController.updateSettings.bind(scheduleController));
+router.get('/services', scheduleController.getUserServices.bind(scheduleController));
+router.put('/services', scheduleController.updateUserServices.bind(scheduleController));
 
 export default router;

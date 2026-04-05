@@ -37,9 +37,7 @@ export class AuthService {
         const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
         // Determine status: Outros category requires admin approval
-        const category = (data as any).category as string | undefined;
-        const profession = (data as any).profession as string | undefined;
-        const status = category === OUTRAS_CATEGORY ? 'PENDING_APPROVAL' : 'ACTIVE';
+        const status = data.category === OUTRAS_CATEGORY ? 'PENDING_APPROVAL' : 'ACTIVE';
 
         // Create user
         const user = await prisma.user.create({
@@ -48,9 +46,15 @@ export class AuthService {
                 email: data.email,
                 passwordHash,
                 whatsapp: data.whatsapp,
-                profession: profession || null,
-                category: category || null,
+                profession: data.profession || null,
+                category: data.category || null,
                 status,
+                services: data.services ? {
+                    create: data.services.map(s => ({
+                        name: s.name,
+                        price: s.price ? parseFloat(s.price) : null
+                    }))
+                } : undefined
             },
             select: {
                 id: true,

@@ -39,7 +39,7 @@ model User {
 
 model Profession {
   id       String              @id @default(uuid())
-  name     String
+  name     String              @unique
   category String
   services ProfessionService[]
 
@@ -52,6 +52,7 @@ model ProfessionService {
   profession   Profession @relation(fields: [professionId], references: [id], onDelete: Cascade)
   name         String
 
+  @@unique([professionId, name])
   @@map("profession_services")
 }
 

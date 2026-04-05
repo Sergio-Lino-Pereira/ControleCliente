@@ -19,7 +19,7 @@ app.use(cookieParser());
 app.use('/api', routes);
 
 // 404 handler
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
     res.status(404).json({
         success: false,
         message: 'Rota não encontrada',
@@ -27,11 +27,11 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error('Error:', err);
-    res.status(500).json({
+    res.status(err.status || 500).json({
         success: false,
-        message: 'Erro interno do servidor',
+        message: err.message || 'Erro interno do servidor',
     });
 });
 

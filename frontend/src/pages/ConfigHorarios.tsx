@@ -18,6 +18,8 @@ export const ConfigHorarios: React.FC = () => {
     const [showInDirectory, setShowInDirectory] = useState(true);
     const [autoConfirm, setAutoConfirm] = useState(false);
     const [settingsSaved, setSettingsSaved] = useState(false);
+    const [services, setServices] = useState<any[]>([]);
+    const [serviceSaved, setServiceSaved] = useState(false);
     
     // Store array of {dayOfWeek, startTime, endTime}
     const [hours, setHours] = useState<any[]>([]);
@@ -31,6 +33,9 @@ export const ConfigHorarios: React.FC = () => {
             setShowInDirectory(res.data.showInDirectory ?? true);
             setAutoConfirm(res.data.autoConfirm ?? false);
             setLoading(false);
+        });
+        agendaService.getUserServices().then(res => {
+            setServices(res.data.services || []);
         });
     }, []);
 
@@ -55,7 +60,30 @@ export const ConfigHorarios: React.FC = () => {
         }
     };
 
+    const handleAddService = () => {
+        setServices([...services, { name: '', price: '' }]);
+    };
+
+    const handleServiceChange = (index: number, field: string, value: string) => {
+        setServices(services.map((s, idx) => idx === index ? { ...s, [field]: value } : s));
+    };
+
+    const handleRemoveService = (index: number) => {
+        setServices(services.filter((_, idx) => idx !== index));
+    };
+
+    const handleSaveServices = async () => {
+        try {
+            await agendaService.updateUserServices(services);
+            setServiceSaved(true);
+            setTimeout(() => setServiceSaved(false), 3000);
+        } catch {
+            alert('Erro ao salvar serviços.');
+        }
+    };
+
     const handleAddSlot = (dayId: number) => {
+// ... existing handlers ...
         setHours([...hours, { dayOfWeek: dayId, startTime: '08:00', endTime: '12:00', whatsappEnabled: false }]);
     };
 
@@ -155,6 +183,65 @@ export const ConfigHorarios: React.FC = () => {
                     <button onClick={handleSaveProfile} className="btn-primary">
                         Salvar Informações
                     </button>
+                </div>
+            </div>
+
+            {/* Services Management */}
+            <div className="card mb-8">
+                <div className="flex items-center justify-between mb-6 border-b pb-4">
+                    <h2 className="text-xl font-semibold">Meus Serviços e Preços</h2>
+                    <button onClick={handleAddService} className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-md border border-blue-200 hover:bg-blue-100 font-bold">
+                        + Novo Serviço
+                    </button>
+                </div>
+                
+                <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                    {services.map((service, idx) => (
+                        <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm relative group">
+                            <button 
+                                onClick={() => handleRemoveService(idx)}
+                                className="absolute -top-2 -right-2 bg-white border border-red-200 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                title="Remover Serviço"
+                            >
+                                🗑️
+                            </button>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Serviço</label>
+                                    <input 
+                                        type="text"
+                                        className="input-field py-1 text-sm font-semibold w-full"
+                                        placeholder="Ex: Corte de Cabelo"
+                                        value={service.name}
+                                        onChange={e => handleServiceChange(idx, 'name', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Preço (Opcional)</label>
+                                    <div className="flex">
+                                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-100 text-gray-500 text-xs">R$</span>
+                                        <input 
+                                            type="text"
+                                            className="flex-1 input-field !rounded-l-none py-1 text-sm font-bold"
+                                            placeholder="0,00"
+                                            value={service.price}
+                                            onChange={e => handleServiceChange(idx, 'price', e.target.value.replace(/[^0-9,.]/g, ''))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {services.length === 0 && (
+                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-500">
+                            Nenhum serviço cadastrado. Clique em "+ Novo Serviço" para começar.
+                        </div>
+                    )}
+                </div>
+                
+                <div className="flex items-center justify-end gap-4">
+                    {serviceSaved && <span className="text-green-600 font-medium">Serviços salvos!</span>}
+                    <button onClick={handleSaveServices} className="btn-primary">Salvar Serviços</button>
                 </div>
             </div>
 

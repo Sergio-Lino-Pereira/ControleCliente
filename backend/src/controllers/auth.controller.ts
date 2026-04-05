@@ -28,10 +28,11 @@ export class AuthController {
             logger.error('Registration error:', error);
 
             if (error instanceof Error) {
-                return res.status(409).json({
+                res.status(409).json({
                     success: false,
                     message: error.message,
                 });
+                return;
             }
 
             res.status(500).json({
@@ -68,10 +69,11 @@ export class AuthController {
             logger.error('Login error:', error);
 
             if (error instanceof Error && error.message === 'Email ou senha inválidos') {
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: error.message,
                 });
+                return;
             }
 
             res.status(500).json({
@@ -105,10 +107,11 @@ export class AuthController {
     async me(req: Request, res: Response) {
         try {
             if (!req.user) {
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: 'Não autenticado',
                 });
+                return;
             }
 
             const user = await authService.getUserById(req.user.id);
@@ -131,10 +134,11 @@ export class AuthController {
             const refreshToken = req.cookies?.refreshToken;
 
             if (!refreshToken) {
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: 'Refresh token não encontrado',
                 });
+                return;
             }
 
             // Verify refresh token

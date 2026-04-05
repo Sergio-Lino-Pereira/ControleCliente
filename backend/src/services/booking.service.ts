@@ -28,10 +28,11 @@ export class BookingService {
         });
         if (!user) return null;
         
-        const rawUsers = await prisma.$queryRaw<any[]>`SELECT whatsapp FROM users WHERE slug = ${slug} LIMIT 1`;
+        const rawUsers = await prisma.$queryRaw<any[]>`SELECT whatsapp, auto_confirm as "autoConfirm" FROM users WHERE slug = ${slug} LIMIT 1`;
         return {
             ...user,
-            whatsapp: rawUsers[0]?.whatsapp || null
+            whatsapp: rawUsers[0]?.whatsapp || null,
+            autoConfirm: rawUsers[0]?.autoConfirm || false
         };
     }
 
@@ -230,15 +231,24 @@ export class BookingService {
                 clientName: data.clientName,
                 clientEmail: data.clientEmail,
                 clientWhatsapp: data.clientWhatsapp,
-                status: 'PENDING' // Requires explicit confirmation
+                status: user.autoConfirm ? 'CONFIRMED' : 'PENDING'
             }
         });
 
-        // Notify Professional via WhatsApp if they have a number configured
+        const dateStr = date.toISOString().split('T')[0].split('-').reverse().join('/');
+
+        // Notify Professional via WhatsApp
         if (user.whatsapp) {
-            const dateStr = date.toISOString().split('T')[0].split('-').reverse().join('/');
-            const msg = `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}* para o dia *${dateStr} às ${data.startTime}*.\nPor favor, acesse o painel para aprovar ou recusar.`;
+            const msg = user.autoConfirm 
+                ? `Olá ${user.name},\n✅ *Agendamento Confirmado!*\nCliente: *${data.clientName}*\nData: *${dateStr} às ${data.startTime}*.`
+                : `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}* para o dia *${dateStr} às ${data.startTime}*.\nPor favor, acesse o painel para confirmar.`;
             await whatsappService.sendMessage(user.whatsapp, msg);
+        }
+
+        // Notify Client if auto-confirmed
+        if (user.autoConfirm && data.clientWhatsapp) {
+            const clientMsg = `Olá ${data.clientName},\nSeu agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi *CONFIRMADO* com sucesso!`;
+            await whatsappService.sendMessage(data.clientWhatsapp, clientMsg);
         }
 
         return newAppt;

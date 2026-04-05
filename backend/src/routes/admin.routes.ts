@@ -8,5 +8,6 @@ const adminController = new AdminController();
 // All admin routes require authentication + admin check is done in controller
 router.get('/users', authenticate, adminController.listUsers.bind(adminController));
 router.delete('/users/:id', authenticate, adminController.deleteUser.bind(adminController));
+router.put('/users/:id/approve', authenticate, adminController.approveUser.bind(adminController));
 
 export default router;

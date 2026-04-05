@@ -12,10 +12,11 @@ export const authenticate = async (
         const token = req.cookies?.accessToken;
 
         if (!token) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Não autenticado. Por favor, faça login.',
             });
+            return;
         }
 
         // Verify token
@@ -30,9 +31,10 @@ export const authenticate = async (
         next();
     } catch (error) {
         logger.error('Authentication error:', error);
-        return res.status(401).json({
+        res.status(401).json({
             success: false,
             message: 'Token inválido ou expirado. Por favor, faça login novamente.',
         });
+        return;
     }
 };

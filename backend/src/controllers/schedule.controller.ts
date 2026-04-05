@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { ScheduleService } from '../services/schedule.service';
 
 const scheduleService = new ScheduleService();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 export class ScheduleController {
     async updateSlug(req: Request, res: Response) {
@@ -88,8 +90,6 @@ export class ScheduleController {
     async updateSettings(req: Request, res: Response) {
         try {
             const { showInDirectory, autoConfirm } = req.body;
-            const { PrismaClient } = require('@prisma/client');
-            const prisma = new PrismaClient();
             await prisma.user.update({
                 where: { id: req.user!.id },
                 data: {
@@ -100,6 +100,34 @@ export class ScheduleController {
             return res.json({ success: true, message: 'Configurações atualizadas' });
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Erro ao atualizar configurações' });
+        }
+    }
+
+    async getUserServices(req: Request, res: Response) {
+        try {
+            const services = await prisma.userService.findMany({
+                where: { userId: req.user!.id }
+            });
+            return res.json({ success: true, data: { services } });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Erro ao buscar serviços' });
+        }
+    }
+
+    async updateUserServices(req: Request, res: Response) {
+        try {
+            const { services } = req.body;
+            await prisma.userService.deleteMany({ where: { userId: req.user!.id } });
+            await prisma.userService.createMany({
+                data: services.map((s: any) => ({
+                    userId: req.user!.id,
+                    name: s.name,
+                    price: s.price ? parseFloat(s.price.toString().replace(',', '.')) : null
+                }))
+            });
+            return res.json({ success: true, message: 'Serviços atualizados com sucesso' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Erro ao atualizar serviços' });
         }
     }
 }

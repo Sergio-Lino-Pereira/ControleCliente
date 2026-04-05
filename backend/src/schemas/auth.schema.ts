@@ -9,6 +9,12 @@ export const registerSchema = z.object({
         .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
         .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
     whatsapp: z.string().min(10, 'WhatsApp deve ter pelo menos 10 dígitos numéricos'),
+    profession: z.string().optional(),
+    category: z.string().optional(),
+    services: z.array(z.object({
+        name: z.string(),
+        price: z.string().optional()
+    })).optional(),
 });
 
 export const loginSchema = z.object({

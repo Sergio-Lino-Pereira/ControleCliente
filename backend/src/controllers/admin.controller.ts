@@ -16,6 +16,9 @@ export class AdminController {
                     whatsapp: true,
                     createdAt: true,
                     slug: true,
+                    status: true,
+                    category: true,
+                    profession: true,
                 },
                 orderBy: { createdAt: 'desc' },
             });
@@ -42,6 +45,19 @@ export class AdminController {
             return res.json({ success: true, message: 'Profissional excluído com sucesso' });
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Erro ao excluir usuário' });
+        }
+    }
+
+    async approveUser(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            await prisma.user.update({
+                where: { id: id as string },
+                data: { status: 'ACTIVE' },
+            });
+            return res.json({ success: true, message: 'Profissional aprovado com sucesso' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Erro ao aprovar usuário' });
         }
     }
 }

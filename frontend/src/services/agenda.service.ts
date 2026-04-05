@@ -31,6 +31,15 @@ export const agendaService = {
         const response = await api.put('/schedule/settings', settings);
         return response.data;
     },
+    async getUserServices() {
+        const response = await api.get('/schedule/services');
+        return response.data;
+    },
+    async updateUserServices(services: { name: string; price: string }[]) {
+        const response = await api.put('/schedule/services', { services });
+        return response.data;
+    },
+
 
 
     // Public
@@ -52,6 +61,16 @@ export const agendaService = {
     },
     async createAppointment(slug: string, data: { date: string, startTime: string, clientName: string, clientEmail: string, clientWhatsapp: string }) {
         const response = await api.post(`/public/booking/${slug}`, data);
+        return response.data;
+    },
+
+    // Lookup
+    async getProfessions() {
+        const response = await api.get('/professions');
+        return response.data;
+    },
+    async getProfessionServices(professionId: string) {
+        const response = await api.get(`/professions/${professionId}/services`);
         return response.data;
     }
 };
