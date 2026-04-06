@@ -49,16 +49,12 @@ router.get('/whatsapp/qr', (_req, res) => {
             <body>
                 <div class="card">
                     <h2>Escaneie para conectar</h2>
-                    <div id="qrcode"></div>
+                    <div id="qrcode">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qr)}" width="256" height="256" alt="QR Code" />
+                    </div>
                     <div class="status">Aguardando leitura pelo WhatsApp...</div>
                 </div>
-                <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
                 <script>
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: "${qr}",
-                        width: 256,
-                        height: 256
-                    });
                     // Refresh every 30 seconds to get new QR if it expires
                     setTimeout(() => window.location.reload(), 30000);
                 </script>
