@@ -22,7 +22,7 @@ router.use('/admin', adminRoutes);
 router.use('/professions', professionRoutes);
 
 // WhatsApp QR Code for easy scanning
-router.get('/whatsapp/qr', (req, res) => {
+router.get('/whatsapp/qr', (_req, res) => {
     const { whatsappProvider } = require('../services/whatsapp.service');
     const qr = whatsappProvider.getQRCode();
 
@@ -34,7 +34,7 @@ router.get('/whatsapp/qr', (req, res) => {
         return res.send('<h1>QR Code ainda não gerado. Aguarde alguns segundos e atualize a página.</h1>');
     }
 
-    res.send(`
+    return res.send(`
         <html>
             <head>
                 <title>WhatsApp QR Code</title>
