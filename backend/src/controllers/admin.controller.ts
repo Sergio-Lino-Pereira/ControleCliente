@@ -5,7 +5,7 @@ const ADMIN_EMAIL = 'linopereira.sergio@gmail.com';
 export class AdminController {
     async listUsers(_req: Request, res: Response) {
         try {
-            const users = await (prisma.user as any).findMany({
+            const users = await prisma.user.findMany({
                 where: { email: { not: ADMIN_EMAIL } },
                 select: {
                     id: true,
@@ -22,6 +22,7 @@ export class AdminController {
             });
             return res.json({ success: true, data: { users } });
         } catch (error) {
+            console.error('Erro ao listar usuários:', error);
             return res.status(500).json({ success: false, message: 'Erro ao listar usuários' });
         }
     }
