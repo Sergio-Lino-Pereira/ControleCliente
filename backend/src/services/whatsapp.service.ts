@@ -40,8 +40,10 @@ class WhatsappServiceClass {
 
     public async initialize() {
         console.log('[WhatsappService] Inicializando o robô do WhatsApp...');
+        console.log(`[WhatsappService] Usando Chromium em: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'Padrão'}`);
         try {
             await this.client.initialize();
+            console.log('[WhatsappService] Chamada de initialize() concluída.');
         } catch (error) {
             console.error('[WhatsappService] Erro fatal ao inicializar o WhatsApp:', error);
         }
