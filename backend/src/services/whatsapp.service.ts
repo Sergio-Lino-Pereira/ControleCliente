@@ -11,7 +11,8 @@ class WhatsappServiceClass {
                 clientId: 'controle-cliente'
             }),
             puppeteer: {
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             }
         });
 
@@ -62,7 +63,7 @@ class WhatsappServiceClass {
             const cleanPhone = phone.replace(/\D/g, '');
             // Assume 55 for Brazil if omitted
             const finalPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-            
+
             // Fetch the correct Whatsapp ID (handles the Brazilian 9th digit automatically)
             const numberDetails = await this.client.getNumberId(finalPhone);
 
