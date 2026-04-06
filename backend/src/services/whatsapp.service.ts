@@ -1,4 +1,5 @@
 import { Client, LocalAuth } from 'whatsapp-web.js';
+// @ts-ignore
 import qrcode from 'qrcode-terminal';
 
 class WhatsappServiceClass {
