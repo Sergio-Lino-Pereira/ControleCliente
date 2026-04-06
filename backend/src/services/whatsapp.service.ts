@@ -5,6 +5,7 @@ import qrcode from 'qrcode-terminal';
 class WhatsappServiceClass {
     private client: Client;
     private ready: boolean = false;
+    private lastQR: string | null = null;
 
     constructor() {
         this.client = new Client({
@@ -18,10 +19,12 @@ class WhatsappServiceClass {
         });
 
         this.client.on('qr', (qr: string) => {
+            this.lastQR = qr;
             console.log('');
             console.log('=============================================================================');
             console.log('[WhatsappService] ⚠️ ESCANEIE O QR CODE ABAIXO NO SEU WHATSAPP (APARELHOS CONECTADOS) ⚠️');
             console.log('=============================================================================');
+            // @ts-ignore
             qrcode.generate(qr, { small: true });
             console.log('=============================================================================');
             console.log('');
@@ -53,6 +56,14 @@ class WhatsappServiceClass {
         if (this.ready) {
             await this.client.destroy();
         }
+    }
+
+    public getQRCode(): string | null {
+        return this.lastQR;
+    }
+
+    public isReady(): boolean {
+        return this.ready;
     }
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {
