@@ -8,8 +8,11 @@ export const authenticate = async (
     next: NextFunction
 ) => {
     try {
-        // Get token from httpOnly cookie
-        const token = req.cookies?.accessToken;
+        // 1. Check for token in Authorization header (Bearer <token>)
+        // 2. Fallback to httpOnly cookie
+        let token = req.headers.authorization?.startsWith('Bearer ')
+            ? req.headers.authorization.split(' ')[1]
+            : req.cookies?.accessToken;
 
         if (!token) {
             res.status(401).json({
@@ -18,6 +21,7 @@ export const authenticate = async (
             });
             return;
         }
+
 
         // Verify token
         const payload = verifyAccessToken(token);

@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt.util';
 
-const prisma = new PrismaClient();
 const SALT_ROUNDS = 12;
 const OUTRAS_CATEGORY = 'Outros';
 
@@ -40,7 +39,7 @@ export class AuthService {
         const status = data.category === OUTRAS_CATEGORY ? 'PENDING_APPROVAL' : 'ACTIVE';
 
         // Create user
-        const user = await prisma.user.create({
+        const user = await (prisma.user as any).create({
             data: {
                 name: data.name,
                 email: data.email,
@@ -67,7 +66,11 @@ export class AuthService {
             },
         });
 
-        return user;
+        // Generate tokens
+        const accessToken = generateAccessToken({ id: user.id, email: user.email });
+        const refreshToken = generateRefreshToken({ id: user.id, email: user.email });
+        
+        return { user, accessToken, refreshToken };
     }
 
     async login(data: LoginInput) {

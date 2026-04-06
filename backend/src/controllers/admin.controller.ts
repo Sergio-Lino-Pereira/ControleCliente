@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 const ADMIN_EMAIL = 'linopereira.sergio@gmail.com';
 
 export class AdminController {
     async listUsers(_req: Request, res: Response) {
         try {
-            const users = await prisma.user.findMany({
+            const users = await (prisma.user as any).findMany({
                 where: { email: { not: ADMIN_EMAIL } },
                 select: {
                     id: true,
@@ -51,7 +49,7 @@ export class AdminController {
     async approveUser(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            await prisma.user.update({
+            await (prisma.user as any).update({
                 where: { id: id as string },
                 data: { status: 'ACTIVE' },
             });

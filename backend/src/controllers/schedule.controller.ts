@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { ScheduleService } from '../services/schedule.service';
+import prisma from '../lib/prisma';
 
 const scheduleService = new ScheduleService();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 
 export class ScheduleController {
     async updateSlug(req: Request, res: Response) {
@@ -33,9 +32,7 @@ export class ScheduleController {
     async getBusinessHours(req: Request, res: Response) {
         try {
             const hours = await scheduleService.getBusinessHours(req.user!.id);
-            const { PrismaClient } = require('@prisma/client');
-            const prisma = new PrismaClient();
-            const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+            const user = await (prisma.user as any).findUnique({ where: { id: req.user!.id } });
             
             return res.json({
                 success: true,
@@ -105,7 +102,7 @@ export class ScheduleController {
 
     async getUserServices(req: Request, res: Response) {
         try {
-            const services = await prisma.userService.findMany({
+            const services = await (prisma as any).userService.findMany({
                 where: { userId: req.user!.id }
             });
             return res.json({ success: true, data: { services } });
@@ -117,8 +114,8 @@ export class ScheduleController {
     async updateUserServices(req: Request, res: Response) {
         try {
             const { services } = req.body;
-            await prisma.userService.deleteMany({ where: { userId: req.user!.id } });
-            await prisma.userService.createMany({
+            await (prisma as any).userService.deleteMany({ where: { userId: req.user!.id } });
+            await (prisma as any).userService.createMany({
                 data: services.map((s: any) => ({
                     userId: req.user!.id,
                     name: s.name,

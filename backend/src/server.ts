@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import app from './app';
-import { PrismaClient } from '@prisma/client';
+import prisma from './lib/prisma';
 import { logger } from './utils/logger.util';
 import { whatsappProvider } from './services/whatsapp.service';
 
@@ -8,14 +8,19 @@ import { whatsappProvider } from './services/whatsapp.service';
 dotenv.config();
 
 const PORT = process.env.PORT || 3001;
-const prisma = new PrismaClient();
+// prisma is now imported from ./lib/prisma
 
 // Test database connection
 async function startServer() {
     try {
         // Test database connection
         await prisma.$connect();
-        logger.info('✅ Database connected successfully');
+        
+        // Log connection info (masked for security)
+        const dbUrl = process.env.DATABASE_URL || '';
+        const host = dbUrl.split('@')[1]?.split(':')[0] || 'localhost';
+        logger.info(`✅ Banco de Dados conectado: ${host}`);
+
 
         // Start server
         app.listen(PORT, async () => {

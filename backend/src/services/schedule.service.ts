@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { WhatsappService } from './whatsapp.service';
 
-const prisma = new PrismaClient();
 const whatsappService = new WhatsappService();
 
 export class ScheduleService {

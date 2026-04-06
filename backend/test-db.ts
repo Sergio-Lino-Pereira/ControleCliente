@@ -1,26 +1,29 @@
 import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
-const prisma = new PrismaClient({ log: ['info', 'warn', 'error'] });
-
-async function test() {
-    try {
-        console.log('Testing connection to DB...');
-        const userCount = await prisma.user.count();
-        console.log(`Connection successful! Users in DB: ${userCount}`);
-        const user = await prisma.user.findFirst();
-        if (user) {
-            console.log('Updating slug for user:', user.id);
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { slug: 'test-slug-' + Date.now() }
-            });
-            console.log('Update success!');
-        }
-    } catch (error) {
-        console.error('Connection failed:', error);
-    } finally {
-        await prisma.$disconnect();
-    }
+async function main() {
+  try {
+    const userCount = await prisma.user.count();
+    console.log(`Total de usuários no banco: ${userCount}`);
+    
+    const users = await prisma.user.findMany({
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        createdAt: true
+      }
+    });
+    
+    console.log('Últimos 5 usuários:');
+    console.table(users);
+  } catch (error) {
+    console.error('Erro ao acessar o banco:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-test();
+main();

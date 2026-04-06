@@ -9,6 +9,21 @@ const api = axios.create({
     },
 });
 
+// Request interceptor to add Authorization header
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+
 // Response interceptor for error handling
 api.interceptors.response.use(
     (response) => response,

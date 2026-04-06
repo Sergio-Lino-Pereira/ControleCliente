@@ -7,23 +7,44 @@ const authService = new AuthService();
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    secure: true, // Required for sameSite: 'none'
+    sameSite: 'none' as const, // Allow cross-domain cookies
     path: '/',
 };
+
 
 export class AuthController {
     async register(req: Request, res: Response) {
         try {
-            const user = await authService.register(req.body);
+            const result = await authService.register(req.body);
 
-            logger.auth('User registered successfully', user.email);
+            // Access accessToken and refreshToken from the result
+            const { user, accessToken, refreshToken } = result;
+
+            // Set httpOnly cookies for immediate login
+            res.cookie('accessToken', accessToken, {
+                ...COOKIE_OPTIONS,
+                maxAge: 15 * 60 * 1000, // 15 minutes
+            });
+
+            res.cookie('refreshToken', refreshToken, {
+                ...COOKIE_OPTIONS,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+
+            logger.auth('User registered successfully and logged in', user.email);
 
             res.status(201).json({
                 success: true,
                 message: 'Usuário cadastrado com sucesso',
-                data: { user },
+                data: { 
+                    user,
+                    accessToken,
+                    refreshToken
+                },
             });
+
+
         } catch (error) {
             logger.error('Registration error:', error);
 
@@ -62,8 +83,13 @@ export class AuthController {
             res.json({
                 success: true,
                 message: 'Login realizado com sucesso',
-                data: { user: result.user },
+                data: { 
+                    user: result.user,
+                    accessToken: result.accessToken,
+                    refreshToken: result.refreshToken
+                },
             });
+
         } catch (error) {
             logger.auth('Login failed', req.body.email);
             logger.error('Login error:', error);

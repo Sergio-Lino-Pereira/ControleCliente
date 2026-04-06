@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { ContactInput } from '../schemas/contact.schema';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export class ContactService {
     async createContactMessage(data: ContactInput) {
