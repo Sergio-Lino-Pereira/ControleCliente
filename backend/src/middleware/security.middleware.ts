@@ -7,15 +7,19 @@ export const setupSecurity = (app: Express) => {
     // Helmet for security headers
     app.use(helmet());
 
-    // CORS configuration
+    // Configuração de CORS - MODO PERMISSIVO PARA TESTE DEFINITIVO
     app.use(
         cors({
-            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-            credentials: true, // Allow cookies
+            origin: true, // Reflete o origin da requisição, aceitando qualquer um
+            credentials: true, // Permitir cookies/JWT
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization'],
+            allowedHeaders: '*',
+            exposedHeaders: ['Set-Cookie']
         })
     );
+
+    console.log('✅ Modo de Segurança CORS ajustado para permissão total.');
+
 };
 
 // Rate limiter for authentication endpoints
