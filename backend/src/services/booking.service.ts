@@ -89,11 +89,11 @@ export class BookingService {
             where: {
                 userId: user.id,
                 date: date,
-                status: { in: ['CONFIRMED', 'PENDING', 'CANCELLED'] } // Cancelled now blocks the slot
+                status: { in: ['CONFIRMED', 'PENDING'] }
             }
         });
 
-        const blockedStarts = appointments.filter(a => ['CONFIRMED', 'CANCELLED'].includes(a.status)).map(a => a.startTime);
+        const blockedStarts = appointments.filter(a => a.status === 'CONFIRMED').map(a => a.startTime);
         const pendingStarts = appointments.filter(a => a.status === 'PENDING').map(a => a.startTime);
 
         const availableSlots = [];
@@ -137,7 +137,7 @@ export class BookingService {
                     gte: startDate,
                     lte: endDate
                 },
-                status: { in: ['CONFIRMED', 'PENDING', 'CANCELLED'] } // CANCELLED now blocks
+                status: { in: ['CONFIRMED', 'PENDING'] }
             }
         });
 
@@ -178,9 +178,9 @@ export class BookingService {
                 }
             }
 
-            // Also check for CANCELLED since it blocks the slots now
+            // Check for CONFIRMED since it blocks the slots
             const bookedTimes = appointments
-                .filter(a => a.date.toDateString() === date.toDateString() && ['CONFIRMED', 'CANCELLED'].includes(a.status))
+                .filter(a => a.date.toDateString() === date.toDateString() && a.status === 'CONFIRMED')
                 .map(a => a.startTime);
 
             const availableSlotsCount = slots.filter(slot => !bookedTimes.includes(slot)).length;
