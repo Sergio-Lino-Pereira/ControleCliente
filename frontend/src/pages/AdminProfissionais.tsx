@@ -268,4 +268,3 @@ export const AdminProfissionais: React.FC = () => {
         </div>
     );
 };
-
