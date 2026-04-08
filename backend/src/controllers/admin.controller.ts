@@ -17,6 +17,12 @@ export class AdminController {
                     status: true,
                     category: true,
                     profession: true,
+                    autoConfirm: true,
+                    showInDirectory: true,
+                    businessHours: {
+                        orderBy: { dayOfWeek: 'asc' }
+                    },
+                    services: true,
                 },
                 orderBy: { createdAt: 'desc' },
             });
