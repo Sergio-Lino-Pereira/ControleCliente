@@ -2,6 +2,7 @@ import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt.util';
+import { generateSlug } from '../utils/slug.util';
 
 const SALT_ROUNDS = 12;
 const OUTRAS_CATEGORY = 'Outros';
@@ -48,6 +49,7 @@ export class AuthService {
                 profession: data.profession || null,
                 category: data.category || null,
                 status,
+                slug: generateSlug(data.name),
                 services: data.services ? {
                     create: data.services.map(s => ({
                         name: s.name,

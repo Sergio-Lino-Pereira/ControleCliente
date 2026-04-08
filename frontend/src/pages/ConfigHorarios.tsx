@@ -20,10 +20,11 @@ export const ConfigHorarios: React.FC = () => {
     const [settingsSaved, setSettingsSaved] = useState(false);
     const [services, setServices] = useState<any[]>([]);
     const [serviceSaved, setServiceSaved] = useState(false);
-    
+
     // Store array of {dayOfWeek, startTime, endTime}
     const [hours, setHours] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [linkCopied, setLinkCopied] = useState(false);
 
     useEffect(() => {
         agendaService.getBusinessHours().then(res => {
@@ -83,7 +84,7 @@ export const ConfigHorarios: React.FC = () => {
     };
 
     const handleAddSlot = (dayId: number) => {
-// ... existing handlers ...
+        // ... existing handlers ...
         setHours([...hours, { dayOfWeek: dayId, startTime: '08:00', endTime: '12:00', whatsappEnabled: false }]);
     };
 
@@ -103,7 +104,7 @@ export const ConfigHorarios: React.FC = () => {
         try {
             await agendaService.updateBusinessHours(hours);
             alert('Horários salvos com sucesso!');
-        } catch(e) {
+        } catch (e) {
             alert('Erro ao salvar horários.');
         }
     };
@@ -178,6 +179,27 @@ export const ConfigHorarios: React.FC = () => {
                         />
                     </div>
                 </div>
+
+                {slug && (
+                    <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Seu Link de Agendamento Público</p>
+                            <code className="text-sm text-blue-800 break-all">{window.location.origin}/agendar/{slug}</code>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const link = `${window.location.origin}/agendar/${slug}`;
+                                navigator.clipboard.writeText(link);
+                                setLinkCopied(true);
+                                setTimeout(() => setLinkCopied(false), 2000);
+                            }}
+                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex-shrink-0 flex items-center gap-2 ${linkCopied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}`}
+                        >
+                            {linkCopied ? '✅ Link Copiado!' : '📋 Copiar Link de Agendamento'}
+                        </button>
+                    </div>
+                )}
+
                 <div className="mt-6 flex items-center justify-end gap-4">
                     {profileSaved && <span className="text-green-600 font-medium">Perfil atualizado com sucesso!</span>}
                     <button onClick={handleSaveProfile} className="btn-primary">
@@ -194,11 +216,11 @@ export const ConfigHorarios: React.FC = () => {
                         + Novo Serviço
                     </button>
                 </div>
-                
+
                 <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     {services.map((service, idx) => (
                         <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm relative group">
-                            <button 
+                            <button
                                 onClick={() => handleRemoveService(idx)}
                                 className="absolute -top-2 -right-2 bg-white border border-red-200 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                                 title="Remover Serviço"
@@ -208,7 +230,7 @@ export const ConfigHorarios: React.FC = () => {
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Serviço</label>
-                                    <input 
+                                    <input
                                         type="text"
                                         className="input-field py-1 text-sm font-semibold w-full"
                                         placeholder="Ex: Corte de Cabelo"
@@ -220,7 +242,7 @@ export const ConfigHorarios: React.FC = () => {
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Preço (Opcional)</label>
                                     <div className="flex">
                                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-100 text-gray-500 text-xs">R$</span>
-                                        <input 
+                                        <input
                                             type="text"
                                             className="flex-1 input-field !rounded-l-none py-1 text-sm font-bold"
                                             placeholder="0,00"
@@ -238,7 +260,7 @@ export const ConfigHorarios: React.FC = () => {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="flex items-center justify-end gap-4">
                     {serviceSaved && <span className="text-green-600 font-medium">Serviços salvos!</span>}
                     <button onClick={handleSaveServices} className="btn-primary">Salvar Serviços</button>
@@ -248,7 +270,7 @@ export const ConfigHorarios: React.FC = () => {
             <div className="card">
                 <h2 className="text-xl font-semibold mb-6 border-b pb-4">Horários de Atendimento</h2>
                 <p className="text-sm text-gray-600 mb-6">Você pode adicionar vários intervalos num único dia (por exemplo, adicionar um horário de 08:00 às 12:00 e outro de 14:00 às 18:00). Os agendamentos usarão frações de 30 minutos.</p>
-                
+
                 <div className="space-y-6 mb-8">
                     {DAYS_OF_WEEK.map(day => {
                         const daySlots = hours
@@ -261,28 +283,28 @@ export const ConfigHorarios: React.FC = () => {
                             <div key={day.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-4 w-48">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={isActive} 
+                                        <input
+                                            type="checkbox"
+                                            checked={isActive}
                                             onChange={() => {
                                                 if (isActive) {
                                                     setHours(hours.filter(h => h.dayOfWeek !== day.id));
                                                 } else {
                                                     handleAddSlot(day.id);
                                                 }
-                                            }} 
+                                            }}
                                             className="h-5 w-5 text-blue-600 rounded cursor-pointer"
                                         />
                                         <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{day.label}</span>
                                     </div>
-                                    
+
                                     {isActive && (
                                         <button onClick={() => handleAddSlot(day.id)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                                             + Adicionar Intervalo
                                         </button>
                                     )}
                                 </div>
-                                
+
                                 {isActive ? (
                                     <div className="pl-10 space-y-3">
                                         {daySlots.map((slot, index) => (
@@ -290,18 +312,18 @@ export const ConfigHorarios: React.FC = () => {
                                                 <span className="text-xs font-semibold text-gray-400 w-16 uppercase">Turno {index + 1}</span>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm text-gray-500">Início</span>
-                                                    <input 
-                                                        type="time" 
-                                                        value={slot.startTime} 
+                                                    <input
+                                                        type="time"
+                                                        value={slot.startTime}
                                                         onChange={e => handleTimeChange(slot.originalIndex, 'startTime', e.target.value)}
                                                         className="input-field py-1"
                                                     />
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm text-gray-500">Fim</span>
-                                                    <input 
-                                                        type="time" 
-                                                        value={slot.endTime} 
+                                                    <input
+                                                        type="time"
+                                                        value={slot.endTime}
                                                         onChange={e => handleTimeChange(slot.originalIndex, 'endTime', e.target.value)}
                                                         className="input-field py-1"
                                                     />

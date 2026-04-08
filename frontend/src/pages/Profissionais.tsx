@@ -18,10 +18,7 @@ export const Profissionais: React.FC = () => {
 
     useEffect(() => {
         agendaService.getProfessionalsList().then(res => {
-            const list = (res.data.professionals || []).filter(
-                (p: any) => p.status === 'ACTIVE' && p.showInDirectory !== false
-            );
-            setProfessionals(list);
+            setProfessionals(res.data.professionals || []);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, []);
@@ -45,11 +42,10 @@ export const Profissionais: React.FC = () => {
                         <button
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                activeCategory === cat
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat
                                     ? 'bg-blue-600 text-white shadow'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                                }`}
                         >
                             {cat !== 'Todos' ? `${CATEGORY_ICONS[cat] || '🔧'} ` : ''}{cat}
                         </button>

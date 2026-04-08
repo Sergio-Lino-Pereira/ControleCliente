@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { generateSlug } from '../utils/slug.util';
 const ADMIN_EMAIL = 'linopereira.sergio@gmail.com';
 
 export class AdminController {
@@ -17,9 +18,32 @@ export class AdminController {
                     status: true,
                     category: true,
                     profession: true,
+                    autoConfirm: true,
+                    showInDirectory: true,
+                    businessHours: {
+                        orderBy: { dayOfWeek: 'asc' }
+                    },
+                    services: true,
                 },
                 orderBy: { createdAt: 'desc' },
             });
+
+            // Auto-fix: ensure every active user has a slug
+            for (const user of users) {
+                if (!user.slug && user.status === 'ACTIVE') {
+                    const newSlug = generateSlug(user.name);
+                    // Check if slug exists already, if so add a random suffix or id (very basic)
+                    const exists = await prisma.user.findUnique({ where: { slug: newSlug } });
+                    const finalSlug = exists ? `${newSlug}-${user.id.slice(0, 4)}` : newSlug;
+
+                    await (prisma.user as any).update({
+                        where: { id: user.id },
+                        data: { slug: finalSlug }
+                    });
+                    user.slug = finalSlug;
+                }
+            }
+
             return res.json({ success: true, data: { users } });
         } catch (error) {
             console.error('Erro ao listar usuários:', error);

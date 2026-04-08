@@ -11,7 +11,9 @@ export class BookingService {
                    auto_confirm as "autoConfirm",
                    status
             FROM users 
-            WHERE slug IS NOT NULL
+            WHERE slug IS NOT NULL 
+              AND status = 'ACTIVE' 
+              AND show_in_directory = true
         `;
         return rawUsers;
     }
@@ -26,7 +28,7 @@ export class BookingService {
             }
         });
         if (!user) return null;
-        
+
         const rawUsers = await prisma.$queryRaw<any[]>`SELECT whatsapp, auto_confirm as "autoConfirm" FROM users WHERE slug = ${slug} LIMIT 1`;
         return {
             ...user,
@@ -56,10 +58,10 @@ export class BookingService {
         for (const bh of businessHours) {
             const [startH, startM] = bh.startTime.split(':').map(Number);
             const [endH, endM] = bh.endTime.split(':').map(Number);
-            
+
             let currentMinutes = (startH || 0) * 60 + (startM || 0);
             const endMinutes = (endH || 0) * 60 + (endM || 0);
-            
+
             while (currentMinutes + 30 <= endMinutes) {
                 const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
                 const m = (currentMinutes % 60).toString().padStart(2, '0');
@@ -80,7 +82,7 @@ export class BookingService {
                 uniqueSlots.push(s);
             }
         }
-        uniqueSlots.sort((a,b) => a.time.localeCompare(b.time));
+        uniqueSlots.sort((a, b) => a.time.localeCompare(b.time));
 
         // fetch existing appointments to filter out
         const appointments = await prisma.appointment.findMany({
@@ -159,10 +161,10 @@ export class BookingService {
             for (const bh of bhs) {
                 const [startH, startM] = bh.startTime.split(':').map(Number);
                 const [endH, endM] = bh.endTime.split(':').map(Number);
-                
+
                 let currentMinutes = (startH || 0) * 60 + (startM || 0);
                 const endMinutes = (endH || 0) * 60 + (endM || 0);
-                
+
                 while (currentMinutes + 30 <= endMinutes) {
                     const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
                     const m = (currentMinutes % 60).toString().padStart(2, '0');
@@ -180,7 +182,7 @@ export class BookingService {
             const bookedTimes = appointments
                 .filter(a => a.date.toDateString() === date.toDateString() && ['CONFIRMED', 'CANCELLED'].includes(a.status))
                 .map(a => a.startTime);
-            
+
             const availableSlotsCount = slots.filter(slot => !bookedTimes.includes(slot)).length;
 
             availability.push({
@@ -238,7 +240,7 @@ export class BookingService {
 
         // Notify Professional via WhatsApp
         if (user.whatsapp) {
-            const msg = user.autoConfirm 
+            const msg = user.autoConfirm
                 ? `Olá ${user.name},\n✅ *Agendamento Confirmado!*\nCliente: *${data.clientName}*\nData: *${dateStr} às ${data.startTime}*.`
                 : `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}* para o dia *${dateStr} às ${data.startTime}*.\nPor favor, acesse o painel para confirmar.`;
             await whatsappService.sendMessage(user.whatsapp, msg);
