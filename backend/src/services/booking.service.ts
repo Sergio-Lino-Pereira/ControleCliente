@@ -243,13 +243,20 @@ export class BookingService {
             const msg = user.autoConfirm
                 ? `Olá ${user.name},\n✅ *Agendamento Confirmado!*\nCliente: *${data.clientName}*\nData: *${dateStr} às ${data.startTime}*.`
                 : `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}* para o dia *${dateStr} às ${data.startTime}*.\nPor favor, acesse o painel para confirmar.`;
-            await whatsappService.sendMessage(user.whatsapp, msg);
+            // Non-blocking call (errors are caught inside)
+            whatsappService.sendMessage(user.whatsapp, msg);
         }
 
-        // Notify Client if auto-confirmed
-        if (user.autoConfirm && data.clientWhatsapp) {
-            const clientMsg = `Olá ${data.clientName},\nSeu agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi *CONFIRMADO* com sucesso!`;
-            await whatsappService.sendMessage(data.clientWhatsapp, clientMsg);
+        // Notify Client
+        if (data.clientWhatsapp) {
+            let clientMsg = '';
+            if (user.autoConfirm) {
+                clientMsg = `Olá ${data.clientName},\nSeu agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi *CONFIRMADO* com sucesso!`;
+            } else {
+                clientMsg = `Olá ${data.clientName},\nSua solicitação de agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi recebida e está *AGUARDANDO CONFIRMAÇÃO*.\nVocê receberá uma nova mensagem assim que for confirmado!`;
+            }
+            // Non-blocking call (errors are caught inside)
+            whatsappService.sendMessage(data.clientWhatsapp, clientMsg);
         }
 
         return newAppt;

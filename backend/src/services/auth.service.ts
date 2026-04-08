@@ -64,6 +64,7 @@ export class AuthService {
                 profession: true,
                 category: true,
                 status: true,
+                isAdmin: true,
                 createdAt: true,
             },
         });
@@ -101,6 +102,7 @@ export class AuthService {
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                isAdmin: user.isAdmin,
                 createdAt: user.createdAt,
             },
             accessToken,
@@ -121,6 +123,7 @@ export class AuthService {
                 showInDirectory: true,
                 autoConfirm: true,
                 whatsapp: true,
+                isAdmin: true,
                 createdAt: true,
             },
         });

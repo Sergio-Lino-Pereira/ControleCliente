@@ -68,8 +68,9 @@ export const PublicBooking: React.FC = () => {
                 clientWhatsapp: `55${clientWhatsapp}`
             });
             setBookingSuccess(true);
-        } catch (err) {
-            setError('Erro ao agendar horário. Tente novamente.');
+        } catch (err: any) {
+            const backendMsg = err.response?.data?.message || 'Erro ao agendar horário. Tente novamente.';
+            setError(backendMsg);
         }
     };
 

@@ -75,6 +75,12 @@ class WhatsappServiceClass {
         return this.ready;
     }
 
+    public getStatus(): string {
+        if (this.ready) return 'CONNECTED';
+        if (this.lastQR) return 'QR_READY';
+        return 'INITIALIZING';
+    }
+
     public async sendMessage(phone: string, message: string): Promise<boolean> {
         if (!this.ready) {
             console.warn(`[WhatsappService] O WhatsApp ainda não está conectado (escanear QR code). Mensagem não enviada para ${phone}`);

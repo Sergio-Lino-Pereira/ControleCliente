@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 export const Navbar: React.FC = () => {
     const { isAuthenticated, user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [wsStatus, setWsStatus] = useState<string>('INITIALIZING');
+
+    useEffect(() => {
+        if (isAuthenticated && user?.isAdmin) {
+            const checkStatus = async () => {
+                try {
+                    const res = await api.get('/health');
+                    setWsStatus(res.data.whatsappStatus);
+                } catch (e) {
+                    setWsStatus('OFFLINE');
+                }
+            };
+            checkStatus();
+            const interval = setInterval(checkStatus, 60000); // Check every minute
+            return () => clearInterval(interval);
+        }
+    }, [isAuthenticated, user]);
 
     const handleLogout = async () => {
         try {
@@ -68,6 +86,12 @@ export const Navbar: React.FC = () => {
                     <div className="flex items-center space-x-2 sm:space-x-4">
                         {isAuthenticated ? (
                             <>
+                                {user?.isAdmin && (
+                                    <div className="flex items-center mr-2 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100" title={`WhatsApp: ${wsStatus}`}>
+                                        <div className={`w-2.5 h-2.5 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : wsStatus === 'QR_READY' ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <span className="ml-2 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest hidden lg:inline">WhatsApp Bot</span>
+                                    </div>
+                                )}
                                 <span className="hidden sm:inline text-sm text-gray-700">Olá, {user?.name}</span>
                                 <button
                                     onClick={handleLogout}
