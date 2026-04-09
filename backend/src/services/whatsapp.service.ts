@@ -23,13 +23,16 @@ class WhatsappServiceClass {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
+                    '--shm-size=1gb', // Try to expand shm
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
-                    '--single-process',
                     '--disable-gpu',
                     '--disable-extensions',
-                    '--disable-software-rasterizer'
+                    '--disable-software-rasterizer',
+                    '--disable-setuid-sandbox',
+                    '--force-device-scale-factor=1',
+                    '--disable-background-networking'
                 ]
             }
         });
