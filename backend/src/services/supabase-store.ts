@@ -28,7 +28,7 @@ export class SupabaseStore {
 
     async sessionExists(options: StoreOptions): Promise<boolean> {
         if (!process.env.SUPABASE_URL) return false;
-        
+
         const fileName = `${options.session}.zip`;
         const { data, error } = await this.supabase.storage
             .from(this.bucketName)
@@ -38,11 +38,13 @@ export class SupabaseStore {
             });
 
         if (error) {
-            console.error('[SupabaseStore] Erro ao verificar existência da sessão:', error.message);
+            console.error(`[SupabaseStore] ❌ Erro ao verificar existência da sessão (${fileName}):`, error.message);
             return false;
         }
 
-        return data.length > 0;
+        const exists = data.length > 0;
+        console.log(`[SupabaseStore] 🔍 Verificação de arquivo (${fileName}): ${exists ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
+        return exists;
     }
 
     private async zipFolder(sourceDir: string, outPath: string): Promise<void> {
@@ -110,7 +112,7 @@ export class SupabaseStore {
                 .download(fileName);
 
             if (error) {
-                console.log('[SupabaseStore] Sessão remota não encontrada ou erro no download (pode ser a primeira vez).');
+                console.log(`[SupabaseStore] ℹ️ Sessão remota (${fileName}) não disponível:`, error.message);
                 return;
             }
 

@@ -5,6 +5,9 @@ import routes from './routes';
 
 const app: Express = express();
 
+// Trust proxy for Render/Proxies (essential for rate limiting)
+app.set('trust proxy', 1);
+
 // Security middleware
 setupSecurity(app);
 

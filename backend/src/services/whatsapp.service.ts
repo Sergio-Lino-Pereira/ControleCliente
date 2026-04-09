@@ -53,7 +53,7 @@ class WhatsappServiceClass {
         });
 
         this.client.on('authenticated', () => {
-            console.log('[WhatsappService] ✅ Autenticado com sucesso! Gerando sessão para o Supabase...');
+            console.log('[WhatsappService] ✅ Autenticado com sucesso! O RemoteAuth deve começar a salvar a sessão...');
         });
 
         this.client.on('auth_failure', (msg) => {
@@ -67,6 +67,7 @@ class WhatsappServiceClass {
         this.client.on('disconnected', (reason: string) => {
             console.warn('[WhatsappService] 🔴 Cliente WhatsApp desconectado:', reason);
             this.ready = false;
+            this.lastQR = null;
         });
     }
 
