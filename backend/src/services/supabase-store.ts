@@ -99,12 +99,12 @@ export class SupabaseStore {
     async extract(options: StoreOptions): Promise<void> {
         if (!process.env.SUPABASE_URL) return;
 
+        console.log(`[SupabaseStore] 🔍 Verificando se existe sessão remota para: ${options.session}...`);
         const fileName = `${options.session}.zip`;
         const zipPath = path.join(process.cwd(), fileName);
         const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session}`);
 
         try {
-            console.log(`[SupabaseStore] 📥 Baixando sessão ${options.session} do Supabase...`);
             const { data, error } = await this.supabase.storage
                 .from(this.bucketName)
                 .download(fileName);

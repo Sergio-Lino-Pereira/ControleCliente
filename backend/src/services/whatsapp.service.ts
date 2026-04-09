@@ -26,8 +26,10 @@ class WhatsappServiceClass {
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
-                    '--single-process', // Crucial for saving memory in containers
-                    '--disable-gpu'
+                    '--single-process',
+                    '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-software-rasterizer'
                 ]
             }
         });
