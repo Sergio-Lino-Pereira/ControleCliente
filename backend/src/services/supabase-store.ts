@@ -107,16 +107,18 @@ export class SupabaseStore {
         const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session}`);
 
         try {
+            console.log(`[SupabaseStore] 📥 Baixando arquivo da sessão (${fileName}) do Supabase...`);
             const { data, error } = await this.supabase.storage
                 .from(this.bucketName)
                 .download(fileName);
 
             if (error) {
-                console.log(`[SupabaseStore] ℹ️ Sessão remota (${fileName}) não disponível:`, error.message);
+                console.log(`[SupabaseStore] ℹ️ Sessão remota (${fileName}) não disponível ou erro no download:`, error.message);
                 return;
             }
 
             if (data) {
+                console.log(`[SupabaseStore] 💾 Gravando arquivo temporário: ${zipPath}`);
                 const buffer = Buffer.from(await data.arrayBuffer());
                 await fs.writeFile(zipPath, buffer);
 
@@ -127,7 +129,7 @@ export class SupabaseStore {
                 console.log(`[SupabaseStore] 📂 Descompactando sessão em: ${sessionDir}...`);
                 await extract(zipPath, { dir: sessionDir });
 
-                console.log(`[SupabaseStore] ✨ Sessão ${options.session} restaurada com sucesso.`);
+                console.log(`[SupabaseStore] ✨ Sessão ${options.session} restaurada com sucesso do Supabase.`);
             }
         } catch (err: any) {
             console.error('[SupabaseStore] ❌ Erro ao extrair sessão:', err.message);

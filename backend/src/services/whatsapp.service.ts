@@ -9,6 +9,7 @@ class WhatsappServiceClass {
     private client: Client;
     private ready: boolean = false;
     private lastQR: string | null = null;
+    private internalStatus: string = 'OFFLINE';
 
     constructor() {
         this.client = new Client({
@@ -45,6 +46,7 @@ class WhatsappServiceClass {
 
         this.client.on('qr', (qr: string) => {
             this.lastQR = qr;
+            this.internalStatus = 'QR_READY';
             console.log('');
             console.log('=============================================================================');
             console.log('[WhatsappService] ⚠️ ESCANEIE O QR CODE ABAIXO NO SEU WHATSAPP (APARELHOS CONECTADOS) ⚠️');
@@ -59,6 +61,7 @@ class WhatsappServiceClass {
             console.log('[WhatsappService] ✨ Cliente WhatsApp conectado e pronto para uso!');
             this.ready = true;
             this.lastQR = null; // Clear QR after success
+            this.internalStatus = 'CONNECTED';
         });
 
         this.client.on('authenticated', () => {
@@ -77,16 +80,22 @@ class WhatsappServiceClass {
             console.warn('[WhatsappService] 🔴 Cliente WhatsApp desconectado:', reason);
             this.ready = false;
             this.lastQR = null;
+            this.internalStatus = 'DISCONNECTED';
         });
     }
 
     public async initialize() {
         console.log('[WhatsappService] Inicializando o robô do WhatsApp...');
+        this.internalStatus = 'INITIALIZING';
         console.log(`[WhatsappService] Usando Chromium em: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'Padrão'}`);
         try {
             await this.client.initialize();
             console.log('[WhatsappService] Chamada de initialize() concluída.');
+            if (!this.ready && !this.lastQR) {
+                this.internalStatus = 'AUTHENTICATING';
+            }
         } catch (error) {
+            this.internalStatus = 'ERROR';
             console.error('[WhatsappService] Erro fatal ao inicializar o WhatsApp:', error);
         }
     }
@@ -106,9 +115,7 @@ class WhatsappServiceClass {
     }
 
     public getStatus(): string {
-        if (this.ready) return 'CONNECTED';
-        if (this.lastQR) return 'QR_READY';
-        return 'INITIALIZING';
+        return this.internalStatus;
     }
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {
