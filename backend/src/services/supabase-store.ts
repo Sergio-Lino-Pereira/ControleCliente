@@ -16,7 +16,9 @@ export class SupabaseStore {
         this.bucketName = 'whatsapp-sessions';
 
         if (!url || !key) {
-            console.warn('[SupabaseStore] ⚠️ SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados. Persistência remota desativada.');
+            console.warn('[SupabaseStore] ⚠️ CRITICAL: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados no ambiente!');
+        } else {
+            console.log('[SupabaseStore] 🟢 Configurações do Supabase detectadas.');
         }
 
         this.supabase = createClient(url || '', key || '');
@@ -61,9 +63,9 @@ export class SupabaseStore {
             });
 
         if (error) {
-            console.error('[SupabaseStore] Erro ao salvar sessão no Supabase:', error.message);
+            console.error('[SupabaseStore] ❌ Erro ao salvar sessão no Supabase:', error.message);
         } else {
-            console.log(`[SupabaseStore] ✅ Sessão ${options.session} persistida no Supabase com sucesso.`);
+            console.log(`[SupabaseStore] ✅ UPLOAD CONCLUÍDO: Sessão ${options.session} persistida no Supabase.`);
             // Optionally delete local zip after upload
             await fs.remove(filePath);
         }
