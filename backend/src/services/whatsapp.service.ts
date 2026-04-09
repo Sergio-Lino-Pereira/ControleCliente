@@ -23,16 +23,22 @@ class WhatsappServiceClass {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--shm-size=1gb', // Try to expand shm
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
                     '--disable-gpu',
                     '--disable-extensions',
                     '--disable-software-rasterizer',
-                    '--disable-setuid-sandbox',
                     '--force-device-scale-factor=1',
-                    '--disable-background-networking'
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--metrics-recording-only',
+                    '--no-default-browser-check',
+                    '--no-experiments',
+                    '--disable-caption-config-display',
+                    '--disable-features=Translate,BackForwardCache,AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckAtStop',
+                    '--js-flags="--max-old-space-size=384"' // Limit JS memory
                 ]
             }
         });
