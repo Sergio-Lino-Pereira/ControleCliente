@@ -1,6 +1,9 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import { Client, RemoteAuth } from 'whatsapp-web.js';
 // @ts-ignore
 import qrcode from 'qrcode-terminal';
+import { SupabaseStore } from './supabase-store';
+
+const store = new SupabaseStore();
 
 class WhatsappServiceClass {
     private client: Client;
@@ -9,8 +12,10 @@ class WhatsappServiceClass {
 
     constructor() {
         this.client = new Client({
-            authStrategy: new LocalAuth({
-                clientId: 'controle-cliente'
+            authStrategy: new RemoteAuth({
+                clientId: 'controle-cliente',
+                store: store,
+                backupSyncIntervalMs: 300000 // Backup every 5 minutes
             }),
             puppeteer: {
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
