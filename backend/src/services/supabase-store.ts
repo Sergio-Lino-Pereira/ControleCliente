@@ -1,6 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import fs from 'fs-extra';
 import path from 'path';
+import archiver from 'archiver';
+import extract from 'extract-zip';
 
 interface StoreOptions {
     session: string;
@@ -43,31 +45,54 @@ export class SupabaseStore {
         return data.length > 0;
     }
 
+    private async zipFolder(sourceDir: string, outPath: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const output = fs.createWriteStream(outPath);
+            const archive = archiver('zip', { zlib: { level: 9 } });
+
+            output.on('close', () => resolve());
+            archive.on('error', (err) => reject(err));
+
+            archive.pipe(output);
+            archive.directory(sourceDir, false);
+            archive.finalize();
+        });
+    }
+
     async save(options: StoreOptions): Promise<void> {
         if (!process.env.SUPABASE_URL) return;
 
-        const fileName = `${options.session}.zip`;
-        const filePath = path.join(process.cwd(), fileName);
+        const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session}`);
+        const zipPath = path.join(process.cwd(), `${options.session}.zip`);
 
-        if (!await fs.pathExists(filePath)) {
-            console.warn(`[SupabaseStore] Arquivo de sessão ${fileName} não encontrado para upload.`);
-            return;
-        }
+        try {
+            if (!await fs.pathExists(sessionDir)) {
+                console.warn(`[SupabaseStore] Pasta de sessão ${sessionDir} não encontrada para compactação.`);
+                return;
+            }
 
-        const fileBuffer = await fs.readFile(filePath);
-        const { error } = await this.supabase.storage
-            .from(this.bucketName)
-            .upload(fileName, fileBuffer, {
-                upsert: true,
-                contentType: 'application/zip'
-            });
+            console.log(`[SupabaseStore] 📦 Compactando pasta de sessão: ${sessionDir}...`);
+            await this.zipFolder(sessionDir, zipPath);
 
-        if (error) {
-            console.error('[SupabaseStore] ❌ Erro ao salvar sessão no Supabase:', error.message);
-        } else {
-            console.log(`[SupabaseStore] ✅ UPLOAD CONCLUÍDO: Sessão ${options.session} persistida no Supabase.`);
-            // Optionally delete local zip after upload
-            await fs.remove(filePath);
+            const fileBuffer = await fs.readFile(zipPath);
+            const { error } = await this.supabase.storage
+                .from(this.bucketName)
+                .upload(`${options.session}.zip`, fileBuffer, {
+                    upsert: true,
+                    contentType: 'application/zip'
+                });
+
+            if (error) {
+                console.error('[SupabaseStore] ❌ Erro ao salvar zip no Supabase:', error.message);
+            } else {
+                console.log(`[SupabaseStore] ✅ UPLOAD CONCLUÍDO: Sessão ${options.session} persistida no Supabase.`);
+            }
+        } catch (err: any) {
+            console.error('[SupabaseStore] ❌ Erro durante o processo de save:', err.message);
+        } finally {
+            if (await fs.pathExists(zipPath)) {
+                await fs.remove(zipPath);
+            }
         }
     }
 
@@ -75,21 +100,39 @@ export class SupabaseStore {
         if (!process.env.SUPABASE_URL) return;
 
         const fileName = `${options.session}.zip`;
-        const filePath = path.join(process.cwd(), fileName);
+        const zipPath = path.join(process.cwd(), fileName);
+        const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session}`);
 
-        const { data, error } = await this.supabase.storage
-            .from(this.bucketName)
-            .download(fileName);
+        try {
+            console.log(`[SupabaseStore] 📥 Baixando sessão ${options.session} do Supabase...`);
+            const { data, error } = await this.supabase.storage
+                .from(this.bucketName)
+                .download(fileName);
 
-        if (error) {
-            console.error('[SupabaseStore] Erro ao baixar sessão do Supabase:', error.message);
-            return;
-        }
+            if (error) {
+                console.log('[SupabaseStore] Sessão remota não encontrada ou erro no download (pode ser a primeira vez).');
+                return;
+            }
 
-        if (data) {
-            const buffer = Buffer.from(await data.arrayBuffer());
-            await fs.writeFile(filePath, buffer);
-            console.log(`[SupabaseStore] 📥 Sessão ${options.session} baixada e preparada localmente.`);
+            if (data) {
+                const buffer = Buffer.from(await data.arrayBuffer());
+                await fs.writeFile(zipPath, buffer);
+
+                // Garantir que a pasta de destino existe e está limpa
+                await fs.ensureDir(sessionDir);
+                await fs.emptyDir(sessionDir);
+
+                console.log(`[SupabaseStore] 📂 Descompactando sessão em: ${sessionDir}...`);
+                await extract(zipPath, { dir: sessionDir });
+
+                console.log(`[SupabaseStore] ✨ Sessão ${options.session} restaurada com sucesso.`);
+            }
+        } catch (err: any) {
+            console.error('[SupabaseStore] ❌ Erro ao extrair sessão:', err.message);
+        } finally {
+            if (await fs.pathExists(zipPath)) {
+                await fs.remove(zipPath);
+            }
         }
     }
 

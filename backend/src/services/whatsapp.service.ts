@@ -47,6 +47,19 @@ class WhatsappServiceClass {
         this.client.on('ready', () => {
             console.log('[WhatsappService] ✨ Cliente WhatsApp conectado e pronto para uso!');
             this.ready = true;
+            this.lastQR = null; // Clear QR after success
+        });
+
+        this.client.on('authenticated', () => {
+            console.log('[WhatsappService] ✅ Autenticado com sucesso! Gerando sessão para o Supabase...');
+        });
+
+        this.client.on('auth_failure', (msg) => {
+            console.error('[WhatsappService] ❌ Falha na autenticação:', msg);
+        });
+
+        this.client.on('loading_screen', (percent, message) => {
+            console.log(`[WhatsappService] ⏳ Carregando: ${percent}% - ${message}`);
         });
 
         this.client.on('disconnected', (reason: string) => {
