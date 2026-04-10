@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs-extra';
 import { Client, RemoteAuth } from 'whatsapp-web.js';
 // @ts-ignore
 import qrcode from 'qrcode-terminal';
@@ -17,7 +19,7 @@ class WhatsappServiceClass {
             authStrategy: new RemoteAuth({
                 clientId: 'controle-cliente',
                 store: store,
-                backupSyncIntervalMs: 300000 // Backup every 5 minutes
+                backupSyncIntervalMs: 600000 // Aumentado para 10 minutos para reduzir picos de carga
             }),
             puppeteer: {
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -33,16 +35,28 @@ class WhatsappServiceClass {
                     '--disable-extensions',
                     '--disable-software-rasterizer',
                     '--disable-features=Translate,BackForwardCache,AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckAtStop',
-                    '--js-flags="--max-old-space-size=256"', // Baixado para 256MB para dar margem ao sistema
+                    '--js-flags="--max-old-space-size=300"', // Reduzido para dar margem à RAM total do sistema
                     '--memory-pressure-thresholds=1',
-                    '--disable-dev-shm-usage',
-                    '--shm-size=128m',
-                    '--no-first-run',
                     '--no-default-browser-check',
                     '--no-pings',
                     '--password-store=basic',
                     '--use-gl=swiftshader',
-                    '--disable-cloud-import'
+                    '--disable-cloud-import',
+                    '--disable-infobars',
+                    '--disable-notifications',
+                    '--disable-background-networking',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-breakpad',
+                    '--disable-client-side-phishing-detection',
+                    '--disable-default-apps',
+                    '--disable-device-discovery-notifications',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-popup-blocking',
+                    '--disable-print-preview',
+                    '--disable-prompt-on-repost',
+                    '--disable-renderer-backgrounding',
+                    '--disable-sync'
                 ],
                 handleSIGINT: false,
                 handleSIGTERM: false,
@@ -64,14 +78,16 @@ class WhatsappServiceClass {
         });
 
         this.client.on('ready', () => {
-            console.log('[WhatsappService] ✨ Cliente WhatsApp conectado e pronto para uso!');
+            const memory = process.memoryUsage();
+            const rss = Math.round(memory.rss / 1024 / 1024);
+            console.log(`[WhatsappService] ✨ Cliente conectado! RAM RSS: ${rss}MB`);
             this.ready = true;
-            this.lastQR = null; // Clear QR after success
+            this.lastQR = null;
             this.internalStatus = 'CONNECTED';
         });
 
         this.client.on('authenticated', () => {
-            console.log('[WhatsappService] ✅ Autenticado com sucesso! O RemoteAuth deve começar a salvar a sessão...');
+            console.log('[WhatsappService] ✅ Autenticado com sucesso!');
         });
 
         this.client.on('auth_failure', (msg) => {
@@ -90,28 +106,57 @@ class WhatsappServiceClass {
         });
     }
 
+    private startMemoryMonitor() {
+        const interval = setInterval(() => {
+            if (!this.isInitializing && !this.ready) {
+                clearInterval(interval);
+                return;
+            }
+            const memory = process.memoryUsage();
+            const rss = Math.round(memory.rss / 1024 / 1024);
+            const heap = Math.round(memory.heapUsed / 1024 / 1024);
+            console.log(`[Monitor] 🧠 RAM: RSS ${rss}MB | Heap ${heap}MB (Limite Render: 512MB)`);
+
+            if (rss > 450) {
+                console.warn('[Monitor] ⚠️ ALERTA: Memória muito alta! O sistema pode cair em breve.');
+            }
+        }, 15000); // Check every 15 seconds
+    }
+
+    private async cleanCache() {
+        try {
+            const cacheDir = path.join(process.cwd(), '.wwebjs_cache');
+            if (await fs.pathExists(cacheDir)) {
+                console.log('[WhatsappService] 🧹 Limpando cache do navegador para liberar espaço...');
+                await fs.emptyDir(cacheDir);
+            }
+        } catch (err) {
+            console.warn('[WhatsappService] Falha ao limpar cache:', err);
+        }
+    }
+
     public async initialize() {
         if (this.isInitializing || this.ready) {
-            console.log('[WhatsappService] Já existe uma inicialização em curso ou o cliente já está pronto.');
+            console.log('[WhatsappService] Inicialização já em curso ou pronto.');
             return;
         }
 
-        console.log('[WhatsappService] 🚀 Inicializando o robô do WhatsApp...');
+        console.log('[WhatsappService] 🚀 Iniciando robô...');
+        await this.cleanCache();
+
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
-        console.log(`[WhatsappService] Usando Chromium em: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'Padrão'}`);
+        this.startMemoryMonitor();
 
         try {
             console.log('[WhatsappService] ⏳ Chamando client.initialize()...');
             await this.client.initialize();
-            console.log('[WhatsappService] ✅ Chamada de client.initialize() concluída.');
+            console.log('[WhatsappService] ✅ client.initialize() concluído.');
         } catch (error) {
             this.internalStatus = 'ERROR';
-            console.error('[WhatsappService] ❌ Erro fatal ao inicializar o WhatsApp:', error);
-            // Tenta limpar estado se falhar
+            console.error('[WhatsappService] ❌ Erro fatal:', error);
             this.isInitializing = false;
         } finally {
-            console.log('[WhatsappService] 🏁 Fim do bloco initialize.');
             this.isInitializing = false;
         }
     }
