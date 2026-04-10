@@ -27,20 +27,19 @@ class WhatsappServiceClass {
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
+                    '--single-process',
                     '--disable-gpu',
                     '--disable-extensions',
                     '--disable-software-rasterizer',
-                    '--force-device-scale-factor=1',
-                    '--disable-background-networking',
-                    '--disable-default-apps',
-                    '--disable-sync',
-                    '--metrics-recording-only',
-                    '--no-default-browser-check',
-                    '--no-experiments',
-                    '--disable-caption-config-display',
                     '--disable-features=Translate,BackForwardCache,AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckAtStop',
-                    '--js-flags="--max-old-space-size=384"' // Limit JS memory
-                ]
+                    '--js-flags="--max-old-space-size=300"',
+                    '--memory-pressure-thresholds=1',
+                    '--disable-dev-shm-usage',
+                    '--shm-size=128m'
+                ],
+                handleSIGINT: false,
+                handleSIGTERM: false,
+                handleSIGHUP: false
             }
         });
 

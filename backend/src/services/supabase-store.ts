@@ -104,13 +104,19 @@ export class SupabaseStore {
         console.log(`[SupabaseStore] 🔍 Verificando se existe sessão remota para: ${options.session}...`);
         const fileName = `${options.session}.zip`;
         const zipPath = path.join(process.cwd(), fileName);
-        const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session}`);
+        
+        // Remove o prefixo RemoteAuth- se existir para encontrar a pasta correta
+        const sessionDir = path.join(process.cwd(), '.wwebjs_auth', `session-${options.session.replace('RemoteAuth-', '')}`);
 
         try {
-            console.log(`[SupabaseStore] 📥 Baixando arquivo da sessão (${fileName}) do Supabase...`);
-            const { data, error } = await this.supabase.storage
-                .from(this.bucketName)
-                .download(fileName);
+            console.log(`[SupabaseStore] 📥 Tentando baixar arquivo da sessão (${fileName}) do Supabase...`);
+            
+            // Adicionando um timeout manual para o download (20 segundos)
+            const downloadPromise = this.supabase.storage.from(this.bucketName).download(fileName);
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_EXCEEDED')), 20000));
+
+            const result: any = await Promise.race([downloadPromise, timeoutPromise]);
+            const { data, error } = result;
 
             if (error) {
                 console.log(`[SupabaseStore] ℹ️ Sessão remota (${fileName}) não disponível ou erro no download:`, error.message);
