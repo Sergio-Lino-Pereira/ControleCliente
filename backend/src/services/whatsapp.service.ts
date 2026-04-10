@@ -10,6 +10,7 @@ class WhatsappServiceClass {
     private ready: boolean = false;
     private lastQR: string | null = null;
     private internalStatus: string = 'OFFLINE';
+    private isInitializing: boolean = false;
 
     constructor() {
         this.client = new Client({
@@ -32,10 +33,16 @@ class WhatsappServiceClass {
                     '--disable-extensions',
                     '--disable-software-rasterizer',
                     '--disable-features=Translate,BackForwardCache,AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckAtStop',
-                    '--js-flags="--max-old-space-size=300"',
+                    '--js-flags="--max-old-space-size=256"', // Baixado para 256MB para dar margem ao sistema
                     '--memory-pressure-thresholds=1',
                     '--disable-dev-shm-usage',
-                    '--shm-size=128m'
+                    '--shm-size=128m',
+                    '--no-first-run',
+                    '--no-default-browser-check',
+                    '--no-pings',
+                    '--password-store=basic',
+                    '--use-gl=swiftshader',
+                    '--disable-cloud-import'
                 ],
                 handleSIGINT: false,
                 handleSIGTERM: false,
@@ -84,18 +91,23 @@ class WhatsappServiceClass {
     }
 
     public async initialize() {
+        if (this.isInitializing || this.ready) {
+            console.log('[WhatsappService] Já existe uma inicialização em curso ou o cliente já está pronto.');
+            return;
+        }
+
         console.log('[WhatsappService] Inicializando o robô do WhatsApp...');
+        this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
         console.log(`[WhatsappService] Usando Chromium em: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'Padrão'}`);
         try {
             await this.client.initialize();
             console.log('[WhatsappService] Chamada de initialize() concluída.');
-            if (!this.ready && !this.lastQR) {
-                this.internalStatus = 'AUTHENTICATING';
-            }
         } catch (error) {
             this.internalStatus = 'ERROR';
             console.error('[WhatsappService] Erro fatal ao inicializar o WhatsApp:', error);
+        } finally {
+            this.isInitializing = false;
         }
     }
 
