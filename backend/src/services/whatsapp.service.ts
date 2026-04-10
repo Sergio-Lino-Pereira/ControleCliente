@@ -96,17 +96,22 @@ class WhatsappServiceClass {
             return;
         }
 
-        console.log('[WhatsappService] Inicializando o robô do WhatsApp...');
+        console.log('[WhatsappService] 🚀 Inicializando o robô do WhatsApp...');
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
         console.log(`[WhatsappService] Usando Chromium em: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'Padrão'}`);
+
         try {
+            console.log('[WhatsappService] ⏳ Chamando client.initialize()...');
             await this.client.initialize();
-            console.log('[WhatsappService] Chamada de initialize() concluída.');
+            console.log('[WhatsappService] ✅ Chamada de client.initialize() concluída.');
         } catch (error) {
             this.internalStatus = 'ERROR';
-            console.error('[WhatsappService] Erro fatal ao inicializar o WhatsApp:', error);
+            console.error('[WhatsappService] ❌ Erro fatal ao inicializar o WhatsApp:', error);
+            // Tenta limpar estado se falhar
+            this.isInitializing = false;
         } finally {
+            console.log('[WhatsappService] 🏁 Fim do bloco initialize.');
             this.isInitializing = false;
         }
     }
