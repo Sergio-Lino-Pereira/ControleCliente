@@ -22,9 +22,11 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
+        "@hapi/boom": "^10.0.1",
         "@prisma/client": "^5.22.0",
         "@supabase/supabase-js": "^2.102.1",
         "@whiskeysockets/baileys": "^7.0.0-rc.9",
+        "adm-zip": "^0.5.17",
         "axios": "^1.14.0",
         "bcrypt": "^5.1.1",
         "cookie-parser": "^1.4.7",
@@ -41,12 +43,14 @@
         "zod": "^3.24.1"
     },
     "devDependencies": {
+        "@types/adm-zip": "^0.5.8",
         "@types/archiver": "^7.0.0",
         "@types/bcrypt": "^5.0.2",
         "@types/cookie-parser": "^1.4.7",
         "@types/cors": "^2.8.17",
         "@types/express": "^5.0.0",
         "@types/fs-extra": "^11.0.4",
+        "@types/hapi__boom": "^9.0.1",
         "@types/jsonwebtoken": "^9.0.7",
         "@types/node": "^22.10.5",
         "@types/qrcode": "^1.5.5",
