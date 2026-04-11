@@ -2,9 +2,7 @@ import makeWASocket, {
     DisconnectReason, 
     useMultiFileAuthState, 
     ConnectionState, 
-    WASocket,
-    fetchLatestBaileysVersion,
-    Browsers
+    WASocket
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -43,11 +41,11 @@ class WhatsappServiceClass {
 
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
-        console.log('[WhatsappService] 🚀 Iniciando processo de conexão...');
+        console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Modo Estabilidade)...');
 
         try {
-            // 0. Buscar versão mais recente do WA
-            const { version } = await fetchLatestBaileysVersion();
+            // 0. Versão fixa estável
+            const version: [number, number, number] = [2, 3000, 1015901307];
             
             // 1. Tentar restaurar do Supabase ou limpar local
             const exists = await store.sessionExists({ session: 'controle-cliente' });
@@ -61,19 +59,19 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com config robusta
+            // 3. Criar o Socket com config de máxima compatibilidade
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 printQRInTerminal: true,
-                logger: pino({ level: 'warn' }), 
-                browser: Browsers.macOS('Desktop'), 
+                logger: pino({ level: 'error' }), 
+                browser: ['Windows', 'Chrome', '111.0.0.0'],
                 syncFullHistory: false, 
-                connectTimeoutMs: 60000,
+                connectTimeoutMs: 120000, // Dobrado para 120s
                 defaultQueryTimeoutMs: 0,
-                keepAliveIntervalMs: 15000,
+                keepAliveIntervalMs: 30000,
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: true
+                markOnlineOnConnect: false
             });
 
             // 4. Escutar atualizações de conexão
@@ -84,7 +82,7 @@ class WhatsappServiceClass {
                     this.internalStatus = 'QR_READY';
                     try {
                         this.lastQR = await QRCode.toDataURL(qr);
-                        console.log('[WhatsappService] 📲 QR Code pronto para escaneamento.');
+                        console.log('[WhatsappService] 📲 QR Code pronto.');
                     } catch (err) {
                         console.error('[WhatsappService] Erro ao gerar imagem do QR:', err);
                     }
@@ -94,22 +92,22 @@ class WhatsappServiceClass {
                     const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                     const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                     
-                    console.error(`[WhatsappService] 🔴 Conexão interrompida (Status: ${statusCode}). Reconectando: ${shouldReconnect}`);
+                    console.error(`[WhatsappService] 🔴 Conexão encerrada. Status: ${statusCode}. Reconectando: ${shouldReconnect}`);
                     
                     this.ready = false;
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
                     if (shouldReconnect) {
-                        setTimeout(() => this.initialize(), 7000);
+                        setTimeout(() => this.initialize(), 10000);
                     } else {
-                        console.warn('[WhatsappService] ⚠️ Logout confirmado. Resetando sessão...');
+                        console.warn('[WhatsappService] ⚠️ Logout/Credenciais Inválidas. Resetando...');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 10000);
+                        setTimeout(() => this.initialize(), 15000);
                     }
                 } else if (connection === 'open') {
-                    console.log('[WhatsappService] ✨ CONECTADO COM SUCESSO!');
+                    console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
                     this.ready = true;
                     this.lastQR = null;
                     this.internalStatus = 'CONNECTED';
