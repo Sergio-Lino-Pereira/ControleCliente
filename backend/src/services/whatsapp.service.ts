@@ -3,7 +3,8 @@ import makeWASocket, {
     useMultiFileAuthState, 
     ConnectionState, 
     WASocket,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    Browsers
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -23,17 +24,15 @@ class WhatsappServiceClass {
     private isInitializing: boolean = false;
     private saveTimeout: NodeJS.Timeout | null = null;
 
-    constructor() {
-        // A inicialização agora acontece via método initialize()
-    }
+    constructor() {}
 
     private async cleanupAuthDir() {
         try {
+            console.log('[WhatsappService] 🧹 Limpando diretório de autenticação local...');
             if (await fs.pathExists(AUTH_DIR)) {
-                await fs.emptyDir(AUTH_DIR);
-            } else {
-                await fs.ensureDir(AUTH_DIR);
+                await fs.remove(AUTH_DIR);
             }
+            await fs.ensureDir(AUTH_DIR);
         } catch (err) {
             console.error('[WhatsappService] Erro ao limpar pasta de autenticação:', err);
         }
@@ -42,18 +41,18 @@ class WhatsappServiceClass {
     public async initialize() {
         if (this.isInitializing || this.ready) return;
 
-        console.log('[WhatsappService] 🚀 Iniciando robô via Baileys (Leve)...');
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
+        console.log('[WhatsappService] 🚀 Iniciando processo de conexão...');
 
         try {
             // 0. Buscar versão mais recente do WA
-            const { version, isLatest } = await fetchLatestBaileysVersion();
-            console.log(`[WhatsappService] Usando WA v${version.join('.')}, isLatest: ${isLatest}`);
-
-            // 1. Tentar baixar sessão existente do Supabase
+            const { version } = await fetchLatestBaileysVersion();
+            
+            // 1. Tentar restaurar do Supabase ou limpar local
             const exists = await store.sessionExists({ session: 'controle-cliente' });
             if (exists) {
+                console.log('[WhatsappService] 📥 Restaurando sessão do Supabase...');
                 await store.extract({ session: 'controle-cliente' });
             } else {
                 await this.cleanupAuthDir();
@@ -62,18 +61,19 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket
+            // 3. Criar o Socket com config robusta
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 printQRInTerminal: true,
-                logger: pino({ level: 'error' }),
-                browser: ['Ubuntu', 'Chrome', '20.0.04'],
+                logger: pino({ level: 'warn' }), 
+                browser: Browsers.macOS('Desktop'), 
+                syncFullHistory: false, 
                 connectTimeoutMs: 60000,
                 defaultQueryTimeoutMs: 0,
-                keepAliveIntervalMs: 10000,
-                emitOwnEvents: true,
-                retryRequestDelayMs: 5000
+                keepAliveIntervalMs: 15000,
+                generateHighQualityLinkPreview: false,
+                markOnlineOnConnect: true
             });
 
             // 4. Escutar atualizações de conexão
@@ -82,34 +82,34 @@ class WhatsappServiceClass {
 
                 if (qr) {
                     this.internalStatus = 'QR_READY';
-                    // Transformar buffer do QR em Base64 para exibir no front
                     try {
                         this.lastQR = await QRCode.toDataURL(qr);
-                        console.log('[WhatsappService] ⚠️ QR Code gerado. Pronto para leitura.');
+                        console.log('[WhatsappService] 📲 QR Code pronto para escaneamento.');
                     } catch (err) {
-                        console.error('[WhatsappService] Erro ao gerar Imagem do QR:', err);
+                        console.error('[WhatsappService] Erro ao gerar imagem do QR:', err);
                     }
                 }
 
                 if (connection === 'close') {
-                    const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-                    console.log('[WhatsappService] 🔴 Conexão fechada devido a:', lastDisconnect?.error, ', reconectando:', shouldReconnect);
+                    const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+                    const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                    
+                    console.error(`[WhatsappService] 🔴 Conexão interrompida (Status: ${statusCode}). Reconectando: ${shouldReconnect}`);
                     
                     this.ready = false;
                     this.internalStatus = 'DISCONNECTED';
+                    this.isInitializing = false;
 
                     if (shouldReconnect) {
-                        this.isInitializing = false;
-                        setTimeout(() => this.initialize(), 5000);
+                        setTimeout(() => this.initialize(), 7000);
                     } else {
-                        console.log('[WhatsappService] ⚠️ Logout detectado. Limpando sessão...');
+                        console.warn('[WhatsappService] ⚠️ Logout confirmado. Resetando sessão...');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        this.isInitializing = false;
-                        setTimeout(() => this.initialize(), 5000);
+                        setTimeout(() => this.initialize(), 10000);
                     }
                 } else if (connection === 'open') {
-                    console.log('[WhatsappService] ✨ Cliente conectado e pronto!');
+                    console.log('[WhatsappService] ✨ CONECTADO COM SUCESSO!');
                     this.ready = true;
                     this.lastQR = null;
                     this.internalStatus = 'CONNECTED';
@@ -121,16 +121,15 @@ class WhatsappServiceClass {
             this.sock.ev.on('creds.update', async () => {
                 await saveCreds();
                 
-                // Debounce o upload para o Supabase para economizar recursos
                 if (this.saveTimeout) clearTimeout(this.saveTimeout);
                 this.saveTimeout = setTimeout(async () => {
                     console.log('[WhatsappService] 🔄 Sincronizando credenciais com Supabase...');
                     await store.save({ session: 'controle-cliente' });
-                }, 10000); // Aguarda 10 segundos de inatividade de escrita antes de subir pro Supabase
+                }, 15000); 
             });
 
         } catch (error) {
-            console.error('[WhatsappService] ❌ Erro fatal na inicialização Baileys:', error);
+            console.error('[WhatsappService] ❌ Erro fatal na inicialização:', error);
             this.internalStatus = 'ERROR';
             this.isInitializing = false;
         }
@@ -138,7 +137,11 @@ class WhatsappServiceClass {
 
     public async disconnect() {
         if (this.sock) {
-            await this.sock.logout();
+            try {
+                await this.sock.logout();
+            } catch (err) {
+                console.warn('[WhatsappService] Erro ao deslogar:', err);
+            }
             this.ready = false;
             this.internalStatus = 'OFFLINE';
         }
