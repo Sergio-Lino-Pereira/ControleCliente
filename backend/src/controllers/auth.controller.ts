@@ -24,12 +24,12 @@ export class AuthController {
             // Set httpOnly cookies for immediate login
             res.cookie('accessToken', accessToken, {
                 ...COOKIE_OPTIONS,
-                maxAge: 15 * 60 * 1000, // 15 minutes
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             });
 
             res.cookie('refreshToken', refreshToken, {
                 ...COOKIE_OPTIONS,
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
             });
 
             logger.auth('User registered successfully and logged in', user.email);
@@ -70,12 +70,12 @@ export class AuthController {
             // Set httpOnly cookies
             res.cookie('accessToken', result.accessToken, {
                 ...COOKIE_OPTIONS,
-                maxAge: 15 * 60 * 1000, // 15 minutes
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             });
 
             res.cookie('refreshToken', result.refreshToken, {
                 ...COOKIE_OPTIONS,
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
             });
 
             logger.auth('User logged in successfully', result.user.email);
@@ -179,7 +179,7 @@ export class AuthController {
             // Set new access token cookie
             res.cookie('accessToken', newAccessToken, {
                 ...COOKIE_OPTIONS,
-                maxAge: 15 * 60 * 1000, // 15 minutes
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             });
 
             logger.auth('Token refreshed', payload.email);
