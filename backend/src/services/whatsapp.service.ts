@@ -2,7 +2,8 @@ import makeWASocket, {
     DisconnectReason, 
     useMultiFileAuthState, 
     ConnectionState, 
-    WASocket 
+    WASocket,
+    fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -46,6 +47,10 @@ class WhatsappServiceClass {
         this.internalStatus = 'INITIALIZING';
 
         try {
+            // 0. Buscar versão mais recente do WA
+            const { version, isLatest } = await fetchLatestBaileysVersion();
+            console.log(`[WhatsappService] Usando WA v${version.join('.')}, isLatest: ${isLatest}`);
+
             // 1. Tentar baixar sessão existente do Supabase
             const exists = await store.sessionExists({ session: 'controle-cliente' });
             if (exists) {
@@ -59,10 +64,16 @@ class WhatsappServiceClass {
 
             // 3. Criar o Socket
             this.sock = makeWASocket({
+                version,
                 auth: state,
                 printQRInTerminal: true,
-                logger: pino({ level: 'silent' }),
-                browser: ['ControleCliente', 'Chrome', '1.0.0']
+                logger: pino({ level: 'error' }),
+                browser: ['Ubuntu', 'Chrome', '20.0.04'],
+                connectTimeoutMs: 60000,
+                defaultQueryTimeoutMs: 0,
+                keepAliveIntervalMs: 10000,
+                emitOwnEvents: true,
+                retryRequestDelayMs: 5000
             });
 
             // 4. Escutar atualizações de conexão
