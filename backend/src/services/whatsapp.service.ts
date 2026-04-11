@@ -106,6 +106,15 @@ class WhatsappServiceClass {
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
+                    // Se o status for 515 (Stream Errored Cut) ou 403, as credenciais podem estar corrompidas
+                    if (statusCode === 515 || statusCode === 403 || statusCode === 401) {
+                        console.warn('[WhatsappService] ⚠️ Erro de protocolo detectado. Limpando sessão para evitar loop...');
+                        await store.delete({ session: 'controle-cliente' });
+                        await this.cleanupAuthDir();
+                        setTimeout(() => this.initialize(), 10000);
+                        return;
+                    }
+
                     if (shouldReconnect) {
                         setTimeout(() => this.initialize(), 10000);
                     } else {
