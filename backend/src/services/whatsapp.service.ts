@@ -2,7 +2,8 @@ import makeWASocket, {
     DisconnectReason, 
     useMultiFileAuthState, 
     ConnectionState, 
-    WASocket
+    WASocket,
+    fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -41,11 +42,18 @@ class WhatsappServiceClass {
 
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
-        console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Modo Estabilidade)...');
+        console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Modo Dinâmico)...');
 
         try {
-            // 0. Versão fixa estável
-            const version: [number, number, number] = [2, 3000, 1015901307];
+            // 0. Buscar versão mais recente com timeout estendido
+            let version: [number, number, number] = [2, 3000, 1015901307]; // Fallback
+            try {
+                const latest = await fetchLatestBaileysVersion();
+                version = latest.version;
+                console.log(`[WhatsappService] Versão WA detectada: ${version.join('.')}`);
+            } catch (err) {
+                console.warn('[WhatsappService] Não foi possível buscar versão atual, usando fallback.');
+            }
             
             // 1. Tentar restaurar do Supabase ou limpar local
             const exists = await store.sessionExists({ session: 'controle-cliente' });
