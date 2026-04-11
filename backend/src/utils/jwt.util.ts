@@ -9,11 +9,11 @@ export interface TokenPayload {
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
 };
 
 export const generateRefreshToken = (payload: TokenPayload): string => {
-    return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '90d' });
 };
 
 export const verifyAccessToken = (token: string): TokenPayload => {

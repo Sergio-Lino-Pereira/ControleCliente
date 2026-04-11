@@ -24,7 +24,6 @@ router.use('/professions', professionRoutes);
 // WhatsApp QR Code for easy scanning
 router.get('/whatsapp/qr', async (_req, res) => {
     const { whatsappProvider } = require('../services/whatsapp.service');
-    const QRCode = require('qrcode');
     const qr = whatsappProvider.getQRCode();
     const status = whatsappProvider.getStatus();
     const isReady = whatsappProvider.isReady();
@@ -55,10 +54,10 @@ router.get('/whatsapp/qr', async (_req, res) => {
 
     if (!qr) {
         let statusMessage = 'Aguardando inicialização...';
-        let subMessage = 'O servidor está iniciando o navegador (Puppeteer). Isso pode levar até 30 segundos no Render.';
+        let subMessage = 'O servidor está iniciando o serviço (Baileys). Isso deve ser rápido.';
 
         if (status === 'INITIALIZING') {
-            statusMessage = 'Iniciando Navegador...';
+            statusMessage = 'Iniciando Robô...';
         } else if (status === 'AUTHENTICATING') {
             statusMessage = 'Autenticando sessão...';
             subMessage = 'Estamos tentando recuperar sua sessão anterior do Supabase.';
@@ -94,50 +93,37 @@ router.get('/whatsapp/qr', async (_req, res) => {
         `);
     }
 
-    // Generate QR Code as Base64 image
-    try {
-        const qrImage = await QRCode.toDataURL(qr, {
-            width: 300,
-            margin: 2,
-            color: {
-                dark: '#000000',
-                light: '#ffffff'
-            }
-        });
-
-        return res.send(`
-            <html>
-                <head>
-                    <title>WhatsApp QR Code</title>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <style>
-                        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f0f2f5; }
-                        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-                        #qrcode { margin: 1.5rem 0; border: 10px solid white; display: inline-block; }
-                        .status { color: #666; margin-top: 1rem; }
-                        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #e7f3ff; color: #1877f2; font-size: 0.8rem; margin-bottom: 0.5rem; }
-                    </style>
-                </head>
-                <body>
-                    <div class="card">
-                        <div class="status-badge">Status: QR Disponível</div>
-                        <h2>Escaneie para conectar</h2>
-                        <div id="qrcode">
-                            <img src="${qrImage}" width="300" height="300" alt="QR Code" />
-                        </div>
-                        <div class="status">Aguardando leitura pelo WhatsApp...</div>
-                        <p style="font-size: 0.8rem; color: #999; margin-top: 1rem;">O QR expira em breve. Atualize se necessário.</p>
+    // O QR agora já vem do service como uma imagem Base64 pronta
+    return res.send(`
+        <html>
+            <head>
+                <title>WhatsApp QR Code</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f0f2f5; }
+                    .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+                    #qrcode { margin: 1.5rem 0; border: 10px solid white; display: inline-block; }
+                    .status { color: #666; margin-top: 1rem; }
+                    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #e7f3ff; color: #1877f2; font-size: 0.8rem; margin-bottom: 0.5rem; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="status-badge">Status: QR Disponível</div>
+                    <h2>Escaneie para conectar</h2>
+                    <div id="qrcode">
+                        <img src="${qr}" width="300" height="300" alt="QR Code" />
                     </div>
-                    <script>
-                        // Refresh every 45 seconds to get new QR if it expires
-                        setTimeout(() => window.location.reload(), 45000);
-                    </script>
-                </body>
-            </html>
-        `);
-    } catch (err) {
-        return res.status(500).send('Erro ao gerar imagem do QR Code');
-    }
+                    <div class="status">Aguardando leitura pelo WhatsApp...</div>
+                    <p style="font-size: 0.8rem; color: #999; margin-top: 1rem;">O QR expira em breve. Atualize se necessário.</p>
+                </div>
+                <script>
+                    // Refresh every 45 seconds to get new QR if it expires
+                    setTimeout(() => window.location.reload(), 45000);
+                </script>
+            </body>
+        </html>
+    `);
 });
 
 export default router;

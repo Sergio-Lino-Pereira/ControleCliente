@@ -1,169 +1,135 @@
-import path from 'path';
+import makeWASocket, { 
+    DisconnectReason, 
+    useMultiFileAuthState, 
+    ConnectionState, 
+    WASocket 
+} from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
+import QRCode from 'qrcode';
+import pino from 'pino';
 import fs from 'fs-extra';
-import { Client, RemoteAuth } from 'whatsapp-web.js';
-// @ts-ignore
-import qrcode from 'qrcode-terminal';
+import path from 'path';
 import { SupabaseStore } from './supabase-store';
 
 const store = new SupabaseStore();
+const AUTH_DIR = path.join(process.cwd(), '.baileys_auth');
 
 class WhatsappServiceClass {
-    private client: Client;
+    private sock: WASocket | null = null;
     private ready: boolean = false;
-    private lastQR: string | null = null;
+    private lastQR: string | null = null; // Base64 image
     private internalStatus: string = 'OFFLINE';
     private isInitializing: boolean = false;
+    private saveTimeout: NodeJS.Timeout | null = null;
 
     constructor() {
-        this.client = new Client({
-            authStrategy: new RemoteAuth({
-                clientId: 'controle-cliente',
-                store: store,
-                backupSyncIntervalMs: 600000 // Aumentado para 10 minutos para reduzir picos de carga
-            }),
-            puppeteer: {
-                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--single-process',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-software-rasterizer',
-                    '--disable-features=Translate,BackForwardCache,AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckAtStop',
-                    '--js-flags="--max-old-space-size=300"', // Reduzido para dar margem à RAM total do sistema
-                    '--memory-pressure-thresholds=1',
-                    '--no-default-browser-check',
-                    '--no-pings',
-                    '--password-store=basic',
-                    '--use-gl=swiftshader',
-                    '--disable-cloud-import',
-                    '--disable-infobars',
-                    '--disable-notifications',
-                    '--disable-background-networking',
-                    '--disable-background-timer-throttling',
-                    '--disable-backgrounding-occluded-windows',
-                    '--disable-breakpad',
-                    '--disable-client-side-phishing-detection',
-                    '--disable-default-apps',
-                    '--disable-device-discovery-notifications',
-                    '--disable-ipc-flooding-protection',
-                    '--disable-popup-blocking',
-                    '--disable-print-preview',
-                    '--disable-prompt-on-repost',
-                    '--disable-renderer-backgrounding',
-                    '--disable-sync'
-                ],
-                handleSIGINT: false,
-                handleSIGTERM: false,
-                handleSIGHUP: false
-            }
-        });
-
-        this.client.on('qr', (qr: string) => {
-            this.lastQR = qr;
-            this.internalStatus = 'QR_READY';
-            console.log('');
-            console.log('=============================================================================');
-            console.log('[WhatsappService] ⚠️ ESCANEIE O QR CODE ABAIXO NO SEU WHATSAPP (APARELHOS CONECTADOS) ⚠️');
-            console.log('=============================================================================');
-            // @ts-ignore
-            qrcode.generate(qr, { small: true });
-            console.log('=============================================================================');
-            console.log('');
-        });
-
-        this.client.on('ready', () => {
-            const memory = process.memoryUsage();
-            const rss = Math.round(memory.rss / 1024 / 1024);
-            console.log(`[WhatsappService] ✨ Cliente conectado! RAM RSS: ${rss}MB`);
-            this.ready = true;
-            this.lastQR = null;
-            this.internalStatus = 'CONNECTED';
-        });
-
-        this.client.on('authenticated', () => {
-            console.log('[WhatsappService] ✅ Autenticado com sucesso!');
-        });
-
-        this.client.on('auth_failure', (msg) => {
-            console.error('[WhatsappService] ❌ Falha na autenticação:', msg);
-        });
-
-        this.client.on('loading_screen', (percent, message) => {
-            console.log(`[WhatsappService] ⏳ Carregando: ${percent}% - ${message}`);
-        });
-
-        this.client.on('disconnected', (reason: string) => {
-            console.warn('[WhatsappService] 🔴 Cliente WhatsApp desconectado:', reason);
-            this.ready = false;
-            this.lastQR = null;
-            this.internalStatus = 'DISCONNECTED';
-        });
+        // A inicialização agora acontece via método initialize()
     }
 
-    private startMemoryMonitor() {
-        const interval = setInterval(() => {
-            if (!this.isInitializing && !this.ready) {
-                clearInterval(interval);
-                return;
-            }
-            const memory = process.memoryUsage();
-            const rss = Math.round(memory.rss / 1024 / 1024);
-            const heap = Math.round(memory.heapUsed / 1024 / 1024);
-            console.log(`[Monitor] 🧠 RAM: RSS ${rss}MB | Heap ${heap}MB (Limite Render: 512MB)`);
-
-            if (rss > 450) {
-                console.warn('[Monitor] ⚠️ ALERTA: Memória muito alta! O sistema pode cair em breve.');
-            }
-        }, 15000); // Check every 15 seconds
-    }
-
-    private async cleanCache() {
+    private async cleanupAuthDir() {
         try {
-            const cacheDir = path.join(process.cwd(), '.wwebjs_cache');
-            if (await fs.pathExists(cacheDir)) {
-                console.log('[WhatsappService] 🧹 Limpando cache do navegador para liberar espaço...');
-                await fs.emptyDir(cacheDir);
+            if (await fs.pathExists(AUTH_DIR)) {
+                await fs.emptyDir(AUTH_DIR);
+            } else {
+                await fs.ensureDir(AUTH_DIR);
             }
         } catch (err) {
-            console.warn('[WhatsappService] Falha ao limpar cache:', err);
+            console.error('[WhatsappService] Erro ao limpar pasta de autenticação:', err);
         }
     }
 
     public async initialize() {
-        if (this.isInitializing || this.ready) {
-            console.log('[WhatsappService] Inicialização já em curso ou pronto.');
-            return;
-        }
+        if (this.isInitializing || this.ready) return;
 
-        console.log('[WhatsappService] 🚀 Iniciando robô...');
-        await this.cleanCache();
-
+        console.log('[WhatsappService] 🚀 Iniciando robô via Baileys (Leve)...');
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
-        this.startMemoryMonitor();
 
         try {
-            console.log('[WhatsappService] ⏳ Chamando client.initialize()...');
-            await this.client.initialize();
-            console.log('[WhatsappService] ✅ client.initialize() concluído.');
+            // 1. Tentar baixar sessão existente do Supabase
+            const exists = await store.sessionExists({ session: 'controle-cliente' });
+            if (exists) {
+                await store.extract({ session: 'controle-cliente' });
+            } else {
+                await this.cleanupAuthDir();
+            }
+
+            // 2. Configurar o estado de autenticação
+            const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+            // 3. Criar o Socket
+            this.sock = makeWASocket({
+                auth: state,
+                printQRInTerminal: true,
+                logger: pino({ level: 'silent' }),
+                browser: ['ControleCliente', 'Chrome', '1.0.0']
+            });
+
+            // 4. Escutar atualizações de conexão
+            this.sock.ev.on('connection.update', async (update: Partial<ConnectionState>) => {
+                const { connection, lastDisconnect, qr } = update;
+
+                if (qr) {
+                    this.internalStatus = 'QR_READY';
+                    // Transformar buffer do QR em Base64 para exibir no front
+                    try {
+                        this.lastQR = await QRCode.toDataURL(qr);
+                        console.log('[WhatsappService] ⚠️ QR Code gerado. Pronto para leitura.');
+                    } catch (err) {
+                        console.error('[WhatsappService] Erro ao gerar Imagem do QR:', err);
+                    }
+                }
+
+                if (connection === 'close') {
+                    const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+                    console.log('[WhatsappService] 🔴 Conexão fechada devido a:', lastDisconnect?.error, ', reconectando:', shouldReconnect);
+                    
+                    this.ready = false;
+                    this.internalStatus = 'DISCONNECTED';
+
+                    if (shouldReconnect) {
+                        this.isInitializing = false;
+                        setTimeout(() => this.initialize(), 5000);
+                    } else {
+                        console.log('[WhatsappService] ⚠️ Logout detectado. Limpando sessão...');
+                        await store.delete({ session: 'controle-cliente' });
+                        await this.cleanupAuthDir();
+                        this.isInitializing = false;
+                        setTimeout(() => this.initialize(), 5000);
+                    }
+                } else if (connection === 'open') {
+                    console.log('[WhatsappService] ✨ Cliente conectado e pronto!');
+                    this.ready = true;
+                    this.lastQR = null;
+                    this.internalStatus = 'CONNECTED';
+                    this.isInitializing = false;
+                }
+            });
+
+            // 5. Salvar credenciais quando atualizadas (Debounced)
+            this.sock.ev.on('creds.update', async () => {
+                await saveCreds();
+                
+                // Debounce o upload para o Supabase para economizar recursos
+                if (this.saveTimeout) clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(async () => {
+                    console.log('[WhatsappService] 🔄 Sincronizando credenciais com Supabase...');
+                    await store.save({ session: 'controle-cliente' });
+                }, 10000); // Aguarda 10 segundos de inatividade de escrita antes de subir pro Supabase
+            });
+
         } catch (error) {
+            console.error('[WhatsappService] ❌ Erro fatal na inicialização Baileys:', error);
             this.internalStatus = 'ERROR';
-            console.error('[WhatsappService] ❌ Erro fatal:', error);
-            this.isInitializing = false;
-        } finally {
             this.isInitializing = false;
         }
     }
 
     public async disconnect() {
-        if (this.ready) {
-            await this.client.destroy();
+        if (this.sock) {
+            await this.sock.logout();
+            this.ready = false;
+            this.internalStatus = 'OFFLINE';
         }
     }
 
@@ -180,39 +146,27 @@ class WhatsappServiceClass {
     }
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {
-        if (!this.ready) {
-            console.warn(`[WhatsappService] O WhatsApp ainda não está conectado (escanear QR code). Mensagem não enviada para ${phone}`);
+        if (!this.ready || !this.sock) {
+            console.warn(`[WhatsappService] Não conectado. Mensagem não enviada para ${phone}`);
             return false;
         }
 
         try {
-            // Clean the phone number
             const cleanPhone = phone.replace(/\D/g, '');
-            // Assume 55 for Brazil if omitted
-            const finalPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-
-            // Fetch the correct Whatsapp ID (handles the Brazilian 9th digit automatically)
-            const numberDetails = await this.client.getNumberId(finalPhone);
-
-            if (!numberDetails) {
-                console.warn(`[WhatsappService] O número ${finalPhone} não parece estar registrado no WhatsApp.`);
-                return false;
-            }
-
-            await this.client.sendMessage(numberDetails._serialized, message);
-            console.log(`[WhatsappService] Mensagem enviada com sucesso para ${finalPhone}`);
+            const jid = cleanPhone.startsWith('55') ? `${cleanPhone}@s.whatsapp.net` : `55${cleanPhone}@s.whatsapp.net`;
+            
+            await this.sock.sendMessage(jid, { text: message });
+            console.log(`[WhatsappService] Mensagem enviada para ${jid}`);
             return true;
         } catch (error: any) {
-            console.error('[WhatsappService] Erro ao tentar enviar mensagem:', error?.message || error);
+            console.error('[WhatsappService] Erro ao enviar mensagem:', error?.message || error);
             return false;
         }
     }
 }
 
-// Export a single dedicated instance
 export const whatsappProvider = new WhatsappServiceClass();
 
-// To keep compatibility with existing files that do "new WhatsappService()":
 export class WhatsappService {
     async sendMessage(phone: string, message: string) {
         return whatsappProvider.sendMessage(phone, message);
