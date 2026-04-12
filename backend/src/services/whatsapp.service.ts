@@ -72,7 +72,6 @@ class WhatsappServiceClass {
             this.sock = makeWASocket({
                 version,
                 auth: state,
-                printQRInTerminal: true,
                 logger: pino({ level: 'error' }), 
                 browser: Browsers.macOS('Chrome'), 
                 syncFullHistory: false, 
