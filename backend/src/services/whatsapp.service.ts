@@ -3,7 +3,8 @@ import makeWASocket, {
     useMultiFileAuthState, 
     ConnectionState, 
     WASocket,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    Browsers
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -73,13 +74,19 @@ class WhatsappServiceClass {
                 auth: state,
                 printQRInTerminal: true,
                 logger: pino({ level: 'error' }), 
-                browser: ['Windows', 'Chrome', '111.0.0.0'],
+                browser: Browsers.macOS('Chrome'), 
                 syncFullHistory: false, 
-                connectTimeoutMs: 120000, // Dobrado para 120s
-                defaultQueryTimeoutMs: 0,
-                keepAliveIntervalMs: 30000,
+                shouldSyncHistoryMessage: () => false, // Não sincronizar histórico para evitar 515
+                connectTimeoutMs: 180000, // 3 minutos
+                defaultQueryTimeoutMs: 90000, // 90 segundos
+                keepAliveIntervalMs: 15000,
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: false
+                markOnlineOnConnect: true,
+                options: {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                    }
+                }
             });
 
             // 4. Escutar atualizações de conexão
@@ -106,22 +113,22 @@ class WhatsappServiceClass {
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
-                    // Se o status for 515 (Stream Errored Cut) ou 403, as credenciais podem estar corrompidas
-                    if (statusCode === 515 || statusCode === 403 || statusCode === 401) {
-                        console.warn('[WhatsappService] ⚠️ Erro de protocolo detectado. Limpando sessão para evitar loop...');
+                    // Se o status for 515 (Stream Errored Cut), 403, 401 ou 428, as credenciais podem estar corrompidas
+                    if ([515, 403, 401, 428, 440, 408].includes(statusCode || 0)) {
+                        console.warn(`[WhatsappService] ⚠️ Erro crítico (${statusCode}) detectado. Resetando para novo scan...`);
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 10000);
+                        setTimeout(() => this.initialize(), 15000);
                         return;
                     }
 
                     if (shouldReconnect) {
-                        setTimeout(() => this.initialize(), 10000);
+                        setTimeout(() => this.initialize(), 15000);
                     } else {
                         console.warn('[WhatsappService] ⚠️ Logout/Credenciais Inválidas. Resetando...');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 15000);
+                        setTimeout(() => this.initialize(), 20000);
                     }
                 } else if (connection === 'open') {
                     console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
@@ -129,18 +136,26 @@ class WhatsappServiceClass {
                     this.lastQR = null;
                     this.internalStatus = 'CONNECTED';
                     this.isInitializing = false;
+                    
+                    // Salvar imediatamente após conectar com sucesso
+                    console.log('[WhatsappService] 💾 Salvando sessão estável no Supabase...');
+                    await store.save({ session: 'controle-cliente' });
                 }
             });
 
-            // 5. Salvar credenciais quando atualizadas (Debounced)
+            // 5. Salvar credenciais quando atualizadas (Debounced e APENAS se estiver pronto)
             this.sock.ev.on('creds.update', async () => {
                 await saveCreds();
                 
-                if (this.saveTimeout) clearTimeout(this.saveTimeout);
-                this.saveTimeout = setTimeout(async () => {
-                    console.log('[WhatsappService] 🔄 Sincronizando credenciais com Supabase...');
-                    await store.save({ session: 'controle-cliente' });
-                }, 15000); 
+                // Só salvamos no Supabase automaticamente se já tivermos passado pelo 'open' 
+                // para evitar salvar estados parciais que causam erro 515
+                if (this.ready) {
+                    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+                    this.saveTimeout = setTimeout(async () => {
+                        console.log('[WhatsappService] 🔄 Sincronizando credenciais estáveis...');
+                        await store.save({ session: 'controle-cliente' });
+                    }, 30000); 
+                }
             });
 
         } catch (error) {
