@@ -219,20 +219,35 @@ class WhatsappServiceClass {
     }
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {
+        console.log(`[WhatsappService] 📨 Tentando enviar mensagem para ${phone}. Status: ${this.internalStatus}, Ready: ${this.ready}`);
+        
         if (!this.ready || !this.sock) {
-            console.warn(`[WhatsappService] Não conectado. Mensagem não enviada para ${phone}`);
+            console.warn(`[WhatsappService] ❌ Falha no envio: Serviço não está pronto (Ready: ${this.ready})`);
             return false;
         }
 
         try {
-            const cleanPhone = phone.replace(/\D/g, '');
-            const jid = cleanPhone.startsWith('55') ? `${cleanPhone}@s.whatsapp.net` : `55${cleanPhone}@s.whatsapp.net`;
+            let cleanPhone = phone.replace(/\D/g, '');
+            
+            // Normalização para números do Brasil (55)
+            if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
+                // Se tem 13 dígitos (55 + DDD + 9 + 8 dígitos), 
+                // o WhatsApp muitas vezes espera o JID sem o nono dígito (55 + DDD + 8 dígitos)
+                // Vamos remover o '9' que fica na posição [4] (ex: 55 67 [9] 9961...)
+                const ddd = cleanPhone.substring(2, 4);
+                const number = cleanPhone.substring(5);
+                const normalized = `55${ddd}${number}`;
+                console.log(`[WhatsappService] 🔁 Normalizando número brasileiro: ${cleanPhone} -> ${normalized}`);
+                cleanPhone = normalized;
+            }
+
+            const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
             
             await this.sock.sendMessage(jid, { text: message });
-            console.log(`[WhatsappService] Mensagem enviada para ${jid}`);
+            console.log(`[WhatsappService] ✅ Mensagem enviada com sucesso para ${jid}`);
             return true;
         } catch (error: any) {
-            console.error('[WhatsappService] Erro ao enviar mensagem:', error?.message || error);
+            console.error('[WhatsappService] ❌ Erro ao enviar mensagem:', error?.message || error);
             return false;
         }
     }
