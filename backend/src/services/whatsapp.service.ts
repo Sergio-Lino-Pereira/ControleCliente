@@ -63,7 +63,7 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com parâmetros padrão estáveis
+            // 3. Criar o Socket com parâmetros de rede ultra-estáveis para Render
             this.sock = makeWASocket({
                 version,
                 auth: state,
@@ -71,11 +71,13 @@ class WhatsappServiceClass {
                 browser: Browsers.macOS('Desktop'), 
                 syncFullHistory: false, 
                 shouldSyncHistoryMessage: () => false,
-                connectTimeoutMs: 120000, 
-                defaultQueryTimeoutMs: 60000, 
-                keepAliveIntervalMs: 15000,
+                connectTimeoutMs: 300000, // 5 minutos para o Render
+                defaultQueryTimeoutMs: 120000, // 2 minutos
+                keepAliveIntervalMs: 10000, // Pulso a cada 10 segundos para não cair
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: true
+                markOnlineOnConnect: false, // Só ficar online após estabilizar
+                retryRequestDelayMs: 5000,
+                maxMsgRetryCount: 1
             });
 
             // 4. Escutar atualizações de conexão

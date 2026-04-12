@@ -150,10 +150,13 @@ router.get('/whatsapp/qr', async (_req, res) => {
                     <div class="divider"><span>OU</span></div>
                     
                     <h3>Conectar via Código</h3>
-                    <p style="color: #666; font-size: 0.85rem; margin-bottom: 1.5rem;">Muito mais estável para servidores em nuvem.</p>
+                    <p style="color: #666; font-size: 0.85rem; margin-bottom: 1.5rem;">
+                        <b>IMPORTANTE:</b> Use o formato internacional (com 55 para Brasil).<br>
+                        Exemplo: 55 + DDD + Numero
+                    </p>
                     
                     <form action="/api/whatsapp/pairing-code" method="POST">
-                        <input type="text" name="phone" placeholder="Ex: 5511999999999" required />
+                        <input type="text" name="phone" placeholder="Ex: 5511999999999" required pattern="^[0-9]+$" />
                         <button type="submit">Gerar Código de Pareamento</button>
                     </form>
                     
