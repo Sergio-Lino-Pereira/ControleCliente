@@ -35,7 +35,7 @@ export const agendaService = {
         const response = await api.get('/schedule/services');
         return response.data;
     },
-    async updateUserServices(services: { name: string; price: string }[]) {
+    async updateUserServices(services: { name: string; price: string; duration: number }[]) {
         const response = await api.put('/schedule/services', { services });
         return response.data;
     },
@@ -51,15 +51,18 @@ export const agendaService = {
         const response = await api.get(`/public/booking/${slug}`);
         return response.data;
     },
-    async getAvailability(slug: string, date: string) {
-        const response = await api.get(`/public/booking/${slug}/availability?date=${date}`);
+    async getAvailability(slug: string, date: string, duration?: number) {
+        const url = duration 
+            ? `/public/booking/${slug}/availability?date=${date}&duration=${duration}` 
+            : `/public/booking/${slug}/availability?date=${date}`;
+        const response = await api.get(url);
         return response.data;
     },
     async getMonthAvailability(slug: string, year: number, month: number) {
         const response = await api.get(`/public/booking/${slug}/availability/month?year=${year}&month=${month}`);
         return response.data;
     },
-    async createAppointment(slug: string, data: { date: string, startTime: string, clientName: string, clientEmail: string, clientWhatsapp: string }) {
+    async createAppointment(slug: string, data: { date: string, startTime: string, clientName: string, clientEmail: string, clientWhatsapp: string, serviceId?: string }) {
         const response = await api.post(`/public/booking/${slug}`, data);
         return response.data;
     },

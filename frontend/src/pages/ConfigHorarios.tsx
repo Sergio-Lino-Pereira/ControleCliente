@@ -62,7 +62,7 @@ export const ConfigHorarios: React.FC = () => {
     };
 
     const handleAddService = () => {
-        setServices([...services, { name: '', price: '' }]);
+        setServices([...services, { name: '', price: '', duration: 30 }]);
     };
 
     const handleServiceChange = (index: number, field: string, value: string) => {
@@ -250,6 +250,21 @@ export const ConfigHorarios: React.FC = () => {
                                             onChange={e => handleServiceChange(idx, 'price', e.target.value.replace(/[^0-9,.]/g, ''))}
                                         />
                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Duração (Minutos)</label>
+                                    <select
+                                        className="input-field py-1 text-sm font-semibold w-full"
+                                        value={service.duration || 30}
+                                        onChange={e => handleServiceChange(idx, 'duration', e.target.value)}
+                                    >
+                                        <option value={15}>15 minutos</option>
+                                        <option value={30}>30 minutos</option>
+                                        <option value={45}>45 minutos</option>
+                                        <option value={60}>1 hora</option>
+                                        <option value={90}>1 hora e 30 min</option>
+                                        <option value={120}>2 horas</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
