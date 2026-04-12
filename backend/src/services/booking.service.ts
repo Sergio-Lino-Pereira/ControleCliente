@@ -25,6 +25,7 @@ export class BookingService {
                 id: true,
                 name: true,
                 slug: true,
+                services: true,
             }
         });
         if (!user) return null;
@@ -37,7 +38,7 @@ export class BookingService {
         };
     }
 
-    async getAvailability(slug: string, dateStr: string) {
+    async getAvailability(slug: string, dateStr: string, serviceDuration: number = 30) {
         const user = await this.getProfessionalBySlug(slug);
         if (!user) throw new Error('Professional not found');
 
@@ -96,14 +97,49 @@ export class BookingService {
         const blockedStarts = appointments.filter(a => a.status === 'CONFIRMED').map(a => a.startTime);
         const pendingStarts = appointments.filter(a => a.status === 'PENDING').map(a => a.startTime);
 
+        // Map for quick lookup of blocked/pending
+        const blockedMap = new Set(blockedStarts);
+        const pendingMap = new Set(pendingStarts);
+
         const availableSlots = [];
-        for (const slot of uniqueSlots) {
-            const isBlocked = blockedStarts.includes(slot.time);
+        for (let i = 0; i < uniqueSlots.length; i++) {
+            const slot = uniqueSlots[i];
+            
+            // Lógica para slots consecutivos baseado na duração
+            const slotsNeeded = Math.ceil(serviceDuration / 30);
+            let isConsecutiveAvailable = true;
+            
+            for (let j = 0; j < slotsNeeded; j++) {
+                const checkIdx = i + j;
+                if (checkIdx >= uniqueSlots.length) {
+                    isConsecutiveAvailable = false;
+                    break;
+                }
+                
+                const currentCheck = uniqueSlots[checkIdx];
+                // Se algum dos slots no meio do caminho estiver bloqueado, invalidar o início
+                if (blockedMap.has(currentCheck.time)) {
+                    isConsecutiveAvailable = false;
+                    break;
+                }
+
+                // Se não for o primeiro e o tempo não for consecutivo (ex: buraco no horário do profissional)
+                if (j > 0) {
+                    const prevCheck = uniqueSlots[checkIdx - 1];
+                    const [currH, currM] = currentCheck.time.split(':').map(Number);
+                    const [prevH, prevM] = prevCheck.time.split(':').map(Number);
+                    if ((currH * 60 + currM) - (prevH * 60 + prevM) !== 30) {
+                        isConsecutiveAvailable = false;
+                        break;
+                    }
+                }
+            }
+
             availableSlots.push({
                 time: slot.time,
                 whatsappEnabled: slot.whatsappEnabled,
-                hasPending: pendingStarts.includes(slot.time),
-                isAvailable: !isBlocked
+                hasPending: pendingMap.has(slot.time),
+                isAvailable: isConsecutiveAvailable
             });
         }
         return availableSlots;
@@ -195,7 +231,7 @@ export class BookingService {
         return availability;
     }
 
-    async createAppointment(slug: string, data: { date: string, startTime: string, clientName: string, clientEmail: string, clientWhatsapp: string }) {
+    async createAppointment(slug: string, data: { date: string, startTime: string, clientName: string, clientEmail: string, clientWhatsapp: string, serviceId?: string }) {
         const user = await this.getProfessionalBySlug(slug);
         if (!user) throw new Error('Professional not found');
 
@@ -220,13 +256,36 @@ export class BookingService {
             throw new Error(`Este número de WhatsApp já possui um agendamento ativo para o dia ${existingAppt.date.toISOString().split('T')[0].split('-').reverse().join('/')}. Aguarde a conclusão ou cancele-o para agendar novamente.`);
         }
 
-        let endTimeStr = '23:59';
-        const startH = parseInt(data.startTime.split(':')[0]);
-        endTimeStr = `${(startH + 1).toString().padStart(2, '0')}:${data.startTime.split(':')[1]}`;
+        // Buscar detalhes do serviço se informado
+        let serviceDuration = 30;
+        let serviceName = null;
+        let servicePrice = null;
+
+        if (data.serviceId) {
+            const service = await (prisma as any).userService.findUnique({
+                where: { id: data.serviceId }
+            });
+            if (service) {
+                serviceDuration = service.duration || 30;
+                serviceName = service.name;
+                servicePrice = service.price;
+            }
+        }
+
+        const [startH, startM] = data.startTime.split(':').map(Number);
+        const totalStartMinutes = startH * 60 + startM;
+        const totalEndMinutes = totalStartMinutes + serviceDuration;
+        
+        const endH = Math.floor(totalEndMinutes / 60).toString().padStart(2, '0');
+        const endM = (totalEndMinutes % 60).toString().padStart(2, '0');
+        const endTimeStr = `${endH}:${endM}`;
 
         const newAppt = await prisma.appointment.create({
             data: {
                 userId: user.id,
+                serviceId: data.serviceId,
+                serviceName: serviceName,
+                servicePrice: servicePrice,
                 date: date,
                 startTime: data.startTime,
                 endTime: endTimeStr,
@@ -241,20 +300,32 @@ export class BookingService {
 
         // Notify Professional via WhatsApp
         if (user.whatsapp) {
+            let details = `Data: *${dateStr} às ${data.startTime}*`;
+            if (serviceName) {
+                details = `Serviço: *${serviceName}*\n${details}`;
+                if (servicePrice) details += `\nValor: *R$ ${servicePrice}*`;
+            }
+
             const msg = user.autoConfirm
-                ? `Olá ${user.name},\n✅ *Agendamento Confirmado!*\nCliente: *${data.clientName}*\nData: *${dateStr} às ${data.startTime}*.`
-                : `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}* para o dia *${dateStr} às ${data.startTime}*.\nPor favor, acesse o painel para confirmar.`;
+                ? `Olá ${user.name},\n✅ *Agendamento Confirmado!*\nCliente: *${data.clientName}*\n${details}`
+                : `Olá ${user.name},\nVocê tem uma nova solicitação de agendamento de *${data.clientName}*.\n${details}\nPor favor, acesse o painel para confirmar.`;
             // Non-blocking call (errors are caught inside)
             whatsappService.sendMessage(user.whatsapp, msg);
         }
 
         // Notify Client
         if (data.clientWhatsapp) {
+            let details = `Data: *${dateStr} às ${data.startTime}*`;
+            if (serviceName) {
+                details = `Serviço: *${serviceName}*\n${details}`;
+                if (servicePrice) details += `\nValor: *R$ ${servicePrice}*`;
+            }
+
             let clientMsg = '';
             if (user.autoConfirm) {
-                clientMsg = `Olá ${data.clientName},\nSeu agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi *CONFIRMADO* com sucesso!`;
+                clientMsg = `Olá ${data.clientName},\nSeu agendamento com *${user.name}* foi *CONFIRMADO* com sucesso!\n${details}`;
             } else {
-                clientMsg = `Olá ${data.clientName},\nSua solicitação de agendamento com *${user.name}* para o dia *${dateStr} às ${data.startTime}* foi recebida e está *AGUARDANDO CONFIRMAÇÃO*.\nVocê receberá uma nova mensagem assim que for confirmado!`;
+                clientMsg = `Olá ${data.clientName},\nSua solicitação de agendamento com *${user.name}* foi recebida e está *AGUARDANDO CONFIRMAÇÃO*.\n${details}\nVocê receberá uma nova mensagem assim que for confirmado!`;
             }
             // Non-blocking call (errors are caught inside)
             whatsappService.sendMessage(data.clientWhatsapp, clientMsg);

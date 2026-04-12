@@ -57,11 +57,14 @@ model ProfessionService {
 }
 
 model UserService {
-  id     String  @id @default(uuid())
-  userId String  @map("user_id")
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name   String
-  price  Decimal? @db.Decimal(10, 2)
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name     String
+  price    Decimal? @db.Decimal(10, 2)
+  duration Int      @default(30) // Minutes
+
+  appointments Appointment[]
 
   @@map("user_services")
 }
@@ -93,9 +96,15 @@ model Appointment {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  serviceId   String?  @map("service_id")
+  service     UserService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceName String?   @map("service_name")
+  servicePrice Decimal?  @map("service_price") @db.Decimal(10, 2)
+
   date        DateTime
   startTime   String   // e.g., "14:00"
-  endTime     String   // e.g., "10:00"
+  endTime     String   // e.g., "10:00" (Calculating properly now)
   
   clientName String
   clientEmail String

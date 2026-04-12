@@ -26,10 +26,14 @@ export class BookingController {
     async getAvailability(req: Request, res: Response) {
         try {
             const { slug } = req.params;
-            const { date } = req.query; // YYYY-MM-DD
+            const { date, duration } = req.query; // YYYY-MM-DD
             if (!date) return res.status(400).json({ success: false, message: 'Data é obrigatória' });
 
-            const slots = await bookingService.getAvailability(slug as string, date as string);
+            const slots = await bookingService.getAvailability(
+                slug as string, 
+                date as string, 
+                duration ? parseInt(duration as string) : 30
+            );
             return res.json({ success: true, data: { slots } });
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Erro ao buscar disponibilidade' });
@@ -51,9 +55,9 @@ export class BookingController {
 
     async createAppointment(req: Request, res: Response) {
         try {
-            const { date, startTime, clientName, clientEmail, clientWhatsapp } = req.body;
+            const { date, startTime, clientName, clientEmail, clientWhatsapp, serviceId } = req.body;
             const appointment = await bookingService.createAppointment(req.params.slug as string, {
-                date, startTime, clientName, clientEmail, clientWhatsapp
+                date, startTime, clientName, clientEmail, clientWhatsapp, serviceId
             });
             return res.status(201).json({ success: true, data: { appointment } });
         } catch (error) {

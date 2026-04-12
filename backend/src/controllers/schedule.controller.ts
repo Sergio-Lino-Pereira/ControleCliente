@@ -119,7 +119,8 @@ export class ScheduleController {
                 data: services.map((s: any) => ({
                     userId: req.user!.id,
                     name: s.name,
-                    price: s.price ? parseFloat(s.price.toString().replace(',', '.')) : null
+                    price: s.price ? parseFloat(s.price.toString().replace(',', '.')) : null,
+                    duration: s.duration ? parseInt(s.duration.toString()) : 30
                 }))
             });
             return res.json({ success: true, message: 'Serviços atualizados com sucesso' });
