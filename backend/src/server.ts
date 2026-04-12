@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
+// Load environment variables immediately
+dotenv.config();
+
 import app from './app';
 import prisma from './lib/prisma';
 import { logger } from './utils/logger.util';
 import { whatsappProvider } from './services/whatsapp.service';
-
-// Load environment variables
-dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 // prisma is now imported from ./lib/prisma

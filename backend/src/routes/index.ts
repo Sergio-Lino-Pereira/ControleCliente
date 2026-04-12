@@ -170,21 +170,48 @@ router.get('/whatsapp/qr', async (_req, res) => {
     `);
 });
 
-// Nova rota para gerar o código de pareamento
-router.post('/whatsapp/pairing-code', async (req, res) => {
-    const { phone } = req.body;
-    if (!phone) {
-        res.status(400).send('Número de telefone é obrigatório.');
-        return;
-    }
+// Rota de teste para enviar mensagens
+router.get('/whatsapp/test', (req, res) => {
+    res.send(`
+        <html>
+            <head>
+                <title>Teste de Envio - WhatsApp</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f0f2f5; margin: 0; }
+                    .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+                    input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+                    button { width: 100%; padding: 10px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+                    button:hover { background: #128C7E; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>Enviar Mensagem de Teste</h2>
+                    <form action="/api/whatsapp/send-test" method="POST">
+                        <input type="text" name="phone" placeholder="Número (ex: 5567999999999)" required />
+                        <textarea name="message" placeholder="Sua mensagem de teste aqui..." rows="4" required></textarea>
+                        <button type="submit">Enviar Agora</button>
+                    </form>
+                    <a href="/api/whatsapp/qr" style="display: block; text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem;">Voltar para Status</a>
+                </div>
+            </body>
+        </html>
+    `);
+});
 
+router.post('/whatsapp/send-test', async (req, res) => {
+    const { phone, message } = req.body;
     try {
         const { whatsappProvider } = require('../services/whatsapp.service');
-        await whatsappProvider.requestPairingCode(phone);
-        // Redireciona de volta para a mesma página, que agora mostrará o código
-        res.redirect('/api/whatsapp/qr');
+        const success = await whatsappProvider.sendMessage(phone, message);
+        if (success) {
+            res.send('✅ Mensagem enviada com sucesso! Verifique seu WhatsApp.');
+        } else {
+            res.status(500).send('❌ O robô não conseguiu enviar a mensagem. Verifique se ele está conectado no console.');
+        }
     } catch (error: any) {
-        res.status(500).send(`Erro ao gerar código: ${error.message}`);
+        res.status(500).send(`❌ Erro: ${error.message}`);
     }
 });
 

@@ -46,37 +46,30 @@ class WhatsappServiceClass {
         console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Versão Estável)...');
 
         try {
-            // 0. Deixar o baileys buscar a versão recomendada
+            // 0. Versão Automática
             const { version } = await fetchLatestBaileysVersion();
             console.log(`[WhatsappService] Protocolo WA: ${version.join('.')}`);
             
-            // 1. Tentar restaurar do Supabase ou limpar local
-            const exists = await store.sessionExists({ session: 'controle-cliente' });
-            if (exists) {
-                console.log('[WhatsappService] 📥 Restaurando sessão do Supabase...');
-                await store.extract({ session: 'controle-cliente' });
-            } else {
-                await this.cleanupAuthDir();
-            }
+            // 1. Garantir que o diretório existe, mas NÃO limpar se já estiver inicializando ou tentando reconectar
+            // A limpeza agora é feita apenas em falhas críticas de autenticação (Status 401, 403, etc)
+            await fs.ensureDir(AUTH_DIR);
 
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com perfil de Celular (Mais confiável)
+            // 3. Criar o Socket com perfil Windows Desktop (Mais compatível)
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 logger: pino({ level: 'error' }), 
-                browser: ['Ubuntu', 'Chrome', '20.0.04'], // Perfil Linux/Chrome estável
+                browser: ['Windows', 'Chrome', '123.0.6312.122'],
                 syncFullHistory: false, 
                 shouldSyncHistoryMessage: () => false,
-                connectTimeoutMs: 300000, 
-                defaultQueryTimeoutMs: 120000, 
-                keepAliveIntervalMs: 5000, 
+                connectTimeoutMs: 120000, 
+                defaultQueryTimeoutMs: 60000, 
+                keepAliveIntervalMs: 30000,
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: false,
-                retryRequestDelayMs: 2000,
-                maxMsgRetryCount: 2
+                markOnlineOnConnect: true
             });
 
             // 4. Escutar atualizações de conexão

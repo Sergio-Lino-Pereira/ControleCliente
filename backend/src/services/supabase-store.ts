@@ -8,21 +8,24 @@ interface StoreOptions {
 }
 
 export class SupabaseStore {
-    private supabase: SupabaseClient;
-    private bucketName: string;
+    private _supabase: SupabaseClient | null = null;
+    private bucketName: string = 'whatsapp-sessions';
 
-    constructor() {
+    constructor() {}
+
+    private get supabase(): SupabaseClient {
+        if (this._supabase) return this._supabase;
+
         const url = process.env.SUPABASE_URL;
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        this.bucketName = 'whatsapp-sessions';
 
         if (!url || !key) {
-            console.warn('[SupabaseStore] ⚠️ CRITICAL: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados no ambiente!');
-        } else {
-            console.log('[SupabaseStore] 🟢 Configurações do Supabase detectadas.');
+            throw new Error('[SupabaseStore] ❌ SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados!');
         }
 
-        this.supabase = createClient(url || '', key || '');
+        console.log('[SupabaseStore] 🟢 Conectando ao Supabase...');
+        this._supabase = createClient(url, key);
+        return this._supabase;
     }
 
     private getAuthBaseDir(): string {
