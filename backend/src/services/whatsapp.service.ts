@@ -3,8 +3,7 @@ import makeWASocket, {
     useMultiFileAuthState, 
     ConnectionState, 
     WASocket,
-    fetchLatestBaileysVersion,
-    Browsers
+    fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
@@ -63,21 +62,21 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com parâmetros de "Sobrevivência" para Render
+            // 3. Criar o Socket com perfil de Celular (Mais confiável)
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 logger: pino({ level: 'error' }), 
-                browser: Browsers.ubuntu('Chrome'), // Perfil mais genérico e estável
+                browser: ['Ubuntu', 'Chrome', '20.0.04'], // Perfil Linux/Chrome estável
                 syncFullHistory: false, 
                 shouldSyncHistoryMessage: () => false,
                 connectTimeoutMs: 300000, 
                 defaultQueryTimeoutMs: 120000, 
-                keepAliveIntervalMs: 5000, // Pulso curtíssimo de 5s para "forçar" o Render
+                keepAliveIntervalMs: 5000, 
                 generateHighQualityLinkPreview: false,
                 markOnlineOnConnect: false,
                 retryRequestDelayMs: 2000,
-                maxMsgRetryCount: 1
+                maxMsgRetryCount: 2
             });
 
             // 4. Escutar atualizações de conexão
@@ -104,7 +103,7 @@ class WhatsappServiceClass {
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
-                    // Erros que exigem reset (408 saiu daqui pq é apenas timeout de rede)
+                    // Erros que exigem reset (Removido 515 daqui para permitir reconexão sem perder o código)
                     const criticalAuthErrors = [DisconnectReason.loggedOut, 401, 403, 428];
 
                     if (criticalAuthErrors.includes(statusCode || 0)) {
@@ -116,7 +115,7 @@ class WhatsappServiceClass {
                     if (shouldReconnect) {
                         setTimeout(() => this.initialize(), 5000);
                     } else {
-                        console.warn('[WhatsappService] ⚠️ Logout ou Sessão encerrada permanentemente.');
+                        console.warn('[WhatsappService] ⚠️ Sessão encerrada permanentemente.');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
                         setTimeout(() => this.initialize(), 10000);
@@ -125,10 +124,11 @@ class WhatsappServiceClass {
                     console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
                     this.ready = true;
                     this.lastQR = null;
+                    this.pairingCode = null; // Limpa o código após sucesso
                     this.internalStatus = 'CONNECTED';
                     this.isInitializing = false;
                     
-                    // Manter a conexão ativa enviando sinal de presença a cada 30s
+                    // Manter a conexão ativa
                     setInterval(() => {
                         if (this.sock && this.ready) {
                             this.sock.sendPresenceUpdate('available');
