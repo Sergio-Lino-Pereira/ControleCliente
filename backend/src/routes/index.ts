@@ -171,7 +171,7 @@ router.get('/whatsapp/qr', async (_req, res) => {
 });
 
 // Rota de teste para enviar mensagens
-router.get('/whatsapp/test', (req, res) => {
+router.get('/whatsapp/test', (_req, res) => {
     res.send(`
         <html>
             <head>
