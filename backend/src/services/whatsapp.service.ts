@@ -20,6 +20,7 @@ class WhatsappServiceClass {
     private sock: WASocket | null = null;
     private ready: boolean = false;
     private lastQR: string | null = null; // Base64 image
+    private pairingCode: string | null = null;
     private internalStatus: string = 'OFFLINE';
     private isInitializing: boolean = false;
     private saveTimeout: NodeJS.Timeout | null = null;
@@ -181,6 +182,45 @@ class WhatsappServiceClass {
 
     public getStatus(): string {
         return this.internalStatus;
+    }
+
+    public getPairingCode(): string | null {
+        return this.pairingCode;
+    }
+
+    public async requestPairingCode(phone: string): Promise<string | null> {
+        console.log(`[WhatsappService] 🔑 Solicitando código de pareamento para ${phone}...`);
+        
+        // Resetar estados anteriores
+        this.pairingCode = null;
+        this.lastQR = null;
+
+        // Se não estiver inicializado, inicia
+        if (!this.sock) {
+            await this.initialize();
+        }
+
+        // Aguardar um pouco para garantir que o socket está pronto para requisições
+        let attempts = 0;
+        while (!this.sock && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
+
+        if (!this.sock) {
+            throw new Error('Não foi possível inicializar o socket para pareamento.');
+        }
+
+        try {
+            const cleanPhone = phone.replace(/\D/g, '');
+            const code = await this.sock.requestPairingCode(cleanPhone);
+            this.pairingCode = code;
+            console.log(`[WhatsappService] ✅ Código gerado: ${code}`);
+            return code;
+        } catch (error) {
+            console.error('[WhatsappService] Erro ao solicitar código de pareamento:', error);
+            throw error;
+        }
     }
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {

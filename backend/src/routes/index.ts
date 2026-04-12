@@ -25,6 +25,7 @@ router.use('/professions', professionRoutes);
 router.get('/whatsapp/qr', async (_req, res) => {
     const { whatsappProvider } = require('../services/whatsapp.service');
     const qr = whatsappProvider.getQRCode();
+    const pairingCode = whatsappProvider.getPairingCode();
     const status = whatsappProvider.getStatus();
     const isReady = whatsappProvider.isReady();
 
@@ -52,6 +53,49 @@ router.get('/whatsapp/qr', async (_req, res) => {
         `);
     }
 
+    // Estilos CSS comuns
+    const commonStyles = `
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 100%; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #25D366; animation: spin 1s linear infinite; margin: 15px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #eee; font-size: 0.8rem; margin-bottom: 1rem; }
+        .pairing-code { font-size: 2.5rem; font-weight: bold; letter-spacing: 5px; color: #128C7E; background: #e7f3ff; padding: 1rem; border-radius: 10px; margin: 1rem 0; font-family: monospace; border: 2px dashed #25D366; }
+        input[type="text"] { padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 15px; font-size: 1rem; }
+        button { background: #25D366; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; transition: background 0.3s; }
+        button:hover { background: #128C7E; }
+        .divider { margin: 2rem 0; border-top: 1px solid #eee; position: relative; }
+        .divider span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; color: #999; font-size: 0.8rem; }
+    `;
+
+    if (pairingCode) {
+        return res.send(`
+            <html>
+                <head>
+                    <title>WhatsApp Código de Pareamento</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>${commonStyles}</style>
+                </head>
+                <body>
+                    <div class="card">
+                        <div class="status-badge">Método: Código de Pareamento</div>
+                        <h2>Seu Código:</h2>
+                        <div class="pairing-code">${pairingCode}</div>
+                        <p style="text-align: left; color: #666; font-size: 0.9rem;">
+                            1. Abra o WhatsApp no seu celular.<br>
+                            2. Vá em <b>Aparelhos Conectados</b>.<br>
+                            3. Toque em <b>Conectar um aparelho</b>.<br>
+                            4. Toque em <b>Conectar com número de telefone</b>.<br>
+                            5. Digite o código acima.
+                        </p>
+                        <button onclick="window.location.href='/api/whatsapp/qr'" style="margin-top: 1rem; background: #f0f2f5; color: #666;">Cancelar e voltar para o QR Code</button>
+                    </div>
+                    <script>setTimeout(() => window.location.reload(), 15000);</script>
+                </body>
+            </html>
+        `);
+    }
+
     if (!qr) {
         let statusMessage = 'Aguardando inicialização...';
         let subMessage = 'O servidor está iniciando o serviço (Baileys). Isso deve ser rápido.';
@@ -71,13 +115,7 @@ router.get('/whatsapp/qr', async (_req, res) => {
                 <head>
                     <title>WhatsApp Status</title>
                     <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <style>
-                        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f0f2f5; }
-                        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
-                        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #25D366; animation: spin 1s linear infinite; margin: 15px auto; }
-                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #eee; font-size: 0.8rem; margin-bottom: 1rem; }
-                    </style>
+                    <style>${commonStyles}</style>
                     <script>setTimeout(() => window.location.reload(), 5000);</script>
                 </head>
                 <body>
@@ -93,37 +131,58 @@ router.get('/whatsapp/qr', async (_req, res) => {
         `);
     }
 
-    // O QR agora já vem do service como uma imagem Base64 pronta
+    // Página Principal: QR Code + Opção de Código de Pareamento
     return res.send(`
         <html>
             <head>
-                <title>WhatsApp QR Code</title>
+                <title>Conectar WhatsApp</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f0f2f5; }
-                    .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-                    #qrcode { margin: 1.5rem 0; border: 10px solid white; display: inline-block; }
-                    .status { color: #666; margin-top: 1rem; }
-                    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #e7f3ff; color: #1877f2; font-size: 0.8rem; margin-bottom: 0.5rem; }
-                </style>
+                <style>${commonStyles}</style>
             </head>
             <body>
                 <div class="card">
-                    <div class="status-badge">Status: QR Disponível</div>
-                    <h2>Escaneie para conectar</h2>
-                    <div id="qrcode">
+                    <div class="status-badge">Status: Pronto para Conectar</div>
+                    <h2>Escaneie o QR Code</h2>
+                    <div style="margin: 1.5rem 0; border: 10px solid white; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <img src="${qr}" width="300" height="300" alt="QR Code" />
                     </div>
-                    <div class="status">Aguardando leitura pelo WhatsApp...</div>
-                    <p style="font-size: 0.8rem; color: #999; margin-top: 1rem;">O QR expira em breve. Atualize se necessário.</p>
+                    
+                    <div class="divider"><span>OU</span></div>
+                    
+                    <h3>Conectar via Código</h3>
+                    <p style="color: #666; font-size: 0.85rem; margin-bottom: 1.5rem;">Muito mais estável para servidores em nuvem.</p>
+                    
+                    <form action="/api/whatsapp/pairing-code" method="POST">
+                        <input type="text" name="phone" placeholder="Ex: 5511999999999" required />
+                        <button type="submit">Gerar Código de Pareamento</button>
+                    </form>
+                    
+                    <p style="font-size: 0.8rem; color: #999; margin-top: 1.5rem;">A página irá atualizar automaticamente.</p>
                 </div>
                 <script>
-                    // Refresh every 45 seconds to get new QR if it expires
                     setTimeout(() => window.location.reload(), 45000);
                 </script>
             </body>
         </html>
     `);
+});
+
+// Nova rota para gerar o código de pareamento
+router.post('/whatsapp/pairing-code', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) {
+        res.status(400).send('Número de telefone é obrigatório.');
+        return;
+    }
+
+    try {
+        const { whatsappProvider } = require('../services/whatsapp.service');
+        await whatsappProvider.requestPairingCode(phone);
+        // Redireciona de volta para a mesma página, que agora mostrará o código
+        res.redirect('/api/whatsapp/qr');
+    } catch (error: any) {
+        res.status(500).send(`Erro ao gerar código: ${error.message}`);
+    }
 });
 
 export default router;
