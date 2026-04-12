@@ -43,18 +43,12 @@ class WhatsappServiceClass {
 
         this.isInitializing = true;
         this.internalStatus = 'INITIALIZING';
-        console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Modo Dinâmico)...');
+        console.log('[WhatsappService] 🚀 Iniciando processo de conexão (Versão Estável)...');
 
         try {
-            // 0. Buscar versão mais recente com timeout estendido
-            let version: [number, number, number] = [2, 3000, 1015901307]; // Fallback
-            try {
-                const latest = await fetchLatestBaileysVersion();
-                version = latest.version;
-                console.log(`[WhatsappService] Versão WA detectada: ${version.join('.')}`);
-            } catch (err) {
-                console.warn('[WhatsappService] Não foi possível buscar versão atual, usando fallback.');
-            }
+            // 0. Deixar o baileys buscar a versão recomendada
+            const { version } = await fetchLatestBaileysVersion();
+            console.log(`[WhatsappService] Protocolo WA: ${version.join('.')}`);
             
             // 1. Tentar restaurar do Supabase ou limpar local
             const exists = await store.sessionExists({ session: 'controle-cliente' });
@@ -68,24 +62,19 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com config de máxima compatibilidade
+            // 3. Criar o Socket com parâmetros padrão estáveis
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 logger: pino({ level: 'error' }), 
-                browser: Browsers.macOS('Chrome'), 
+                browser: Browsers.macOS('Desktop'), 
                 syncFullHistory: false, 
-                shouldSyncHistoryMessage: () => false, // Não sincronizar histórico para evitar 515
-                connectTimeoutMs: 180000, // 3 minutos
-                defaultQueryTimeoutMs: 90000, // 90 segundos
+                shouldSyncHistoryMessage: () => false,
+                connectTimeoutMs: 120000, 
+                defaultQueryTimeoutMs: 60000, 
                 keepAliveIntervalMs: 15000,
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: true,
-                options: {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-                    }
-                }
+                markOnlineOnConnect: true
             });
 
             // 4. Escutar atualizações de conexão
@@ -106,28 +95,34 @@ class WhatsappServiceClass {
                     const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                     const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                     
-                    console.error(`[WhatsappService] 🔴 Conexão encerrada. Status: ${statusCode}. Reconectando: ${shouldReconnect}`);
+                    console.error(`[WhatsappService] 🔴 Conexão encerrada (Status: ${statusCode}). Reconectando: ${shouldReconnect}`);
                     
                     this.ready = false;
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
-                    // Se o status for 515 (Stream Errored Cut), 403, 401 ou 428, as credenciais podem estar corrompidas
-                    if ([515, 403, 401, 428, 440, 408].includes(statusCode || 0)) {
-                        console.warn(`[WhatsappService] ⚠️ Erro crítico (${statusCode}) detectado. Resetando para novo scan...`);
+                    // Erros que exigem reset imediato para evitar loop infinito de 515/408/etc
+                    const criticalErrors = [
+                        DisconnectReason.connectionLost,
+                        DisconnectReason.connectionClosed,
+                        DisconnectReason.connectionReplaced,
+                        DisconnectReason.timedOut,
+                        515, 403, 401, 428, 440, 408
+                    ];
+
+                    if (criticalErrors.includes(statusCode || 0)) {
+                        console.warn(`[WhatsappService] ⚠️ Falha crítica (${statusCode}). Limpando sessão para nova tentativa limpa...`);
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 15000);
-                        return;
                     }
 
                     if (shouldReconnect) {
-                        setTimeout(() => this.initialize(), 15000);
+                        setTimeout(() => this.initialize(), 10000);
                     } else {
-                        console.warn('[WhatsappService] ⚠️ Logout/Credenciais Inválidas. Resetando...');
+                        console.warn('[WhatsappService] ⚠️ Logout confirmado pelo usuário ou sistema.');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 20000);
+                        setTimeout(() => this.initialize(), 15000);
                     }
                 } else if (connection === 'open') {
                     console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
