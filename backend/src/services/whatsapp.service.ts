@@ -63,20 +63,20 @@ class WhatsappServiceClass {
             // 2. Configurar o estado de autenticação
             const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-            // 3. Criar o Socket com parâmetros de rede ultra-estáveis para Render
+            // 3. Criar o Socket com parâmetros de "Sobrevivência" para Render
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 logger: pino({ level: 'error' }), 
-                browser: Browsers.macOS('Desktop'), 
+                browser: Browsers.ubuntu('Chrome'), // Perfil mais genérico e estável
                 syncFullHistory: false, 
                 shouldSyncHistoryMessage: () => false,
-                connectTimeoutMs: 300000, // 5 minutos para o Render
-                defaultQueryTimeoutMs: 120000, // 2 minutos
-                keepAliveIntervalMs: 10000, // Pulso a cada 10 segundos para não cair
+                connectTimeoutMs: 300000, 
+                defaultQueryTimeoutMs: 120000, 
+                keepAliveIntervalMs: 5000, // Pulso curtíssimo de 5s para "forçar" o Render
                 generateHighQualityLinkPreview: false,
-                markOnlineOnConnect: false, // Só ficar online após estabilizar
-                retryRequestDelayMs: 5000,
+                markOnlineOnConnect: false,
+                retryRequestDelayMs: 2000,
                 maxMsgRetryCount: 1
             });
 
@@ -104,28 +104,22 @@ class WhatsappServiceClass {
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
 
-                    // Erros que exigem reset imediato para evitar loop infinito de 515/408/etc
-                    const criticalErrors = [
-                        DisconnectReason.connectionLost,
-                        DisconnectReason.connectionClosed,
-                        DisconnectReason.connectionReplaced,
-                        DisconnectReason.timedOut,
-                        515, 403, 401, 428, 440, 408
-                    ];
+                    // Erros que exigem reset (408 saiu daqui pq é apenas timeout de rede)
+                    const criticalAuthErrors = [DisconnectReason.loggedOut, 401, 403, 428];
 
-                    if (criticalErrors.includes(statusCode || 0)) {
-                        console.warn(`[WhatsappService] ⚠️ Falha crítica (${statusCode}). Limpando sessão para nova tentativa limpa...`);
+                    if (criticalAuthErrors.includes(statusCode || 0)) {
+                        console.warn(`[WhatsappService] ⚠️ Falha de Autenticação (${statusCode}). Resetando sessão...`);
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
                     }
 
                     if (shouldReconnect) {
-                        setTimeout(() => this.initialize(), 10000);
+                        setTimeout(() => this.initialize(), 5000);
                     } else {
-                        console.warn('[WhatsappService] ⚠️ Logout confirmado pelo usuário ou sistema.');
+                        console.warn('[WhatsappService] ⚠️ Logout ou Sessão encerrada permanentemente.');
                         await store.delete({ session: 'controle-cliente' });
                         await this.cleanupAuthDir();
-                        setTimeout(() => this.initialize(), 15000);
+                        setTimeout(() => this.initialize(), 10000);
                     }
                 } else if (connection === 'open') {
                     console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
@@ -134,7 +128,13 @@ class WhatsappServiceClass {
                     this.internalStatus = 'CONNECTED';
                     this.isInitializing = false;
                     
-                    // Salvar imediatamente após conectar com sucesso
+                    // Manter a conexão ativa enviando sinal de presença a cada 30s
+                    setInterval(() => {
+                        if (this.sock && this.ready) {
+                            this.sock.sendPresenceUpdate('available');
+                        }
+                    }, 30000);
+
                     console.log('[WhatsappService] 💾 Salvando sessão estável no Supabase...');
                     await store.save({ session: 'controle-cliente' });
                 }
