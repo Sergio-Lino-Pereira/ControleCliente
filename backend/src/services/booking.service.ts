@@ -209,6 +209,7 @@ export class BookingService {
 
         const existingAppt = await prisma.appointment.findFirst({
             where: {
+                userId: user.id,
                 clientWhatsapp: data.clientWhatsapp,
                 status: { in: ['CONFIRMED', 'PENDING'] },
                 date: { gte: today }
