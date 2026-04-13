@@ -1,7 +1,7 @@
-import makeWASocket, { 
-    DisconnectReason, 
-    useMultiFileAuthState, 
-    ConnectionState, 
+import makeWASocket, {
+    DisconnectReason,
+    useMultiFileAuthState,
+    ConnectionState,
     WASocket,
     fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys';
@@ -24,7 +24,7 @@ class WhatsappServiceClass {
     private isInitializing: boolean = false;
     private saveTimeout: NodeJS.Timeout | null = null;
 
-    constructor() {}
+    constructor() { }
 
     private async cleanupAuthDir() {
         try {
@@ -53,7 +53,7 @@ class WhatsappServiceClass {
             // 0.1 Baixar sessão do Supabase (para persistência entre deploys/reboots)
             console.log('[WhatsappService] 📥 Tentando recuperar sessão do banco de dados...');
             await store.download({ session: 'controle-cliente' });
-            
+
             // 1. Garantir que o diretório existe...
             // A limpeza agora é feita apenas em falhas críticas de autenticação (Status 401, 403, etc)
             await fs.ensureDir(AUTH_DIR);
@@ -65,12 +65,12 @@ class WhatsappServiceClass {
             this.sock = makeWASocket({
                 version,
                 auth: state,
-                logger: pino({ level: 'error' }), 
+                logger: pino({ level: 'error' }),
                 browser: ['Windows', 'Chrome', '123.0.6312.122'],
-                syncFullHistory: false, 
+                syncFullHistory: false,
                 shouldSyncHistoryMessage: () => false,
-                connectTimeoutMs: 120000, 
-                defaultQueryTimeoutMs: 60000, 
+                connectTimeoutMs: 120000,
+                defaultQueryTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000,
                 generateHighQualityLinkPreview: false,
                 markOnlineOnConnect: true
@@ -90,12 +90,17 @@ class WhatsappServiceClass {
                     }
                 }
 
+                if (connection === 'connecting') {
+                    console.log('[WhatsappService] ⏳ Conectando ao WhatsApp...');
+                    this.internalStatus = 'CONNECTING';
+                }
+
                 if (connection === 'close') {
                     const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                     const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                    
+
                     console.error(`[WhatsappService] 🔴 Conexão encerrada (Status: ${statusCode}). Reconectando: ${shouldReconnect}`);
-                    
+
                     this.ready = false;
                     this.internalStatus = 'DISCONNECTED';
                     this.isInitializing = false;
@@ -121,10 +126,13 @@ class WhatsappServiceClass {
                     console.log('[WhatsappService] ✨ CONEXÃO ESTABELECIDA COM SUCESSO!');
                     this.ready = true;
                     this.lastQR = null;
-                    this.pairingCode = null; // Limpa o código após sucesso
+                    this.pairingCode = null;
                     this.internalStatus = 'CONNECTED';
                     this.isInitializing = false;
-                    
+
+                    const user = this.sock?.user;
+                    console.log(`[WhatsappService] 👤 Conectado como: ${user?.name || 'WhatsApp Robot'} (${user?.id})`);
+
                     // Manter a conexão ativa
                     setInterval(() => {
                         if (this.sock && this.ready) {
@@ -140,7 +148,7 @@ class WhatsappServiceClass {
             // 5. Salvar credenciais quando atualizadas (Debounced e APENAS se estiver pronto)
             this.sock.ev.on('creds.update', async () => {
                 await saveCreds();
-                
+
                 // Só salvamos no Supabase automaticamente se já tivermos passado pelo 'open' 
                 // para evitar salvar estados parciais que causam erro 515
                 if (this.ready) {
@@ -148,7 +156,7 @@ class WhatsappServiceClass {
                     this.saveTimeout = setTimeout(async () => {
                         console.log('[WhatsappService] 🔄 Sincronizando credenciais estáveis...');
                         await store.save({ session: 'controle-cliente' });
-                    }, 30000); 
+                    }, 30000);
                 }
             });
 
@@ -157,6 +165,43 @@ class WhatsappServiceClass {
             this.internalStatus = 'ERROR';
             this.isInitializing = false;
         }
+    }
+
+    public async reset() {
+        console.log('[WhatsappService] 🔄 Resetando serviço...');
+
+        // 1. Limpar estados
+        this.pairingCode = null;
+        this.lastQR = null;
+        this.ready = false;
+        this.isInitializing = false;
+        this.internalStatus = 'OFFLINE';
+
+        if (this.sock) {
+            try {
+                // Remover listeners para evitar vazamento de memória e chamadas duplicadas
+                this.sock.ev.removeAllListeners('connection.update');
+                this.sock.ev.removeAllListeners('creds.update');
+                // Fechar conexão
+                this.sock.end(undefined);
+                console.log('[WhatsappService] 🔌 Socket fechado com sucesso.');
+            } catch (err) {
+                console.warn('[WhatsappService] Erro ao fechar socket:', err);
+            }
+            this.sock = null;
+        }
+
+        // 2. Limpar cache local (força novo login se não houver persistência)
+        try {
+            await this.cleanupAuthDir();
+            console.log('[WhatsappService] 🧹 Cache de autenticação limpo.');
+        } catch (err) {
+            console.error('[WhatsappService] Erro ao limpar cache durante reset:', err);
+        }
+
+        // 3. Reiniciar processo
+        console.log('[WhatsappService] ♻️ Reiniciando serviço...');
+        await this.initialize();
     }
 
     public async disconnect() {
@@ -189,7 +234,7 @@ class WhatsappServiceClass {
 
     public async requestPairingCode(phone: string): Promise<string | null> {
         console.log(`[WhatsappService] 🔑 Solicitando código de pareamento para ${phone}...`);
-        
+
         // Resetar estados anteriores
         this.pairingCode = null;
         this.lastQR = null;
@@ -224,7 +269,7 @@ class WhatsappServiceClass {
 
     public async sendMessage(phone: string, message: string): Promise<boolean> {
         console.log(`[WhatsappService] 📨 Tentando enviar mensagem para ${phone}. Status: ${this.internalStatus}, Ready: ${this.ready}`);
-        
+
         if (!this.ready || !this.sock) {
             console.warn(`[WhatsappService] ❌ Falha no envio: Serviço não está pronto (Ready: ${this.ready})`);
             return false;
@@ -232,7 +277,7 @@ class WhatsappServiceClass {
 
         try {
             let cleanPhone = phone.replace(/\D/g, '');
-            
+
             // Normalização para números do Brasil (55)
             if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
                 // Se tem 13 dígitos (55 + DDD + 9 + 8 dígitos), 
@@ -246,7 +291,7 @@ class WhatsappServiceClass {
             }
 
             const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
-            
+
             await this.sock.sendMessage(jid, { text: message });
             console.log(`[WhatsappService] ✅ Mensagem enviada com sucesso para ${jid}`);
             return true;

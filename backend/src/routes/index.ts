@@ -88,7 +88,8 @@ router.get('/whatsapp/qr', async (_req, res) => {
                             4. Toque em <b>Conectar com número de telefone</b>.<br>
                             5. Digite o código acima.
                         </p>
-                        <button onclick="window.location.href='/api/whatsapp/qr'" style="margin-top: 1rem; background: #f0f2f5; color: #666;">Cancelar e voltar para o QR Code</button>
+                        </p>
+                        <button onclick="window.location.href='/api/whatsapp/reset'" style="margin-top: 1rem; background: #f0f2f5; color: #666;">Cancelar e voltar para o QR Code</button>
                     </div>
                     <script>setTimeout(() => window.location.reload(), 15000);</script>
                 </body>
@@ -125,6 +126,7 @@ router.get('/whatsapp/qr', async (_req, res) => {
                         <div class="spinner"></div>
                         <p style="color: #666;">${subMessage}</p>
                         <p style="font-size: 0.8rem; color: #999;">A página irá atualizar automaticamente...</p>
+                        <button onclick="window.location.href='/api/whatsapp/reset'" style="margin-top: 1.5rem; background: #f0f2f5; color: #999; font-size: 0.8rem; padding: 8px;">Forçar Reinicialização (Reset)</button>
                     </div>
                 </body>
             </html>
@@ -177,11 +179,23 @@ router.post('/whatsapp/pairing-code', async (req, res) => {
     try {
         const { whatsappProvider } = require('../services/whatsapp.service');
         await whatsappProvider.requestPairingCode(phone);
-        
+
         // Redireciona de volta para a página que agora mostrará o código
         return res.redirect('/api/whatsapp/qr');
     } catch (error: any) {
         return res.status(500).send(`Erro ao gerar código: ${error.message}`);
+    }
+});
+
+router.get('/whatsapp/reset', async (_req, res) => {
+    try {
+        const { whatsappProvider } = require('../services/whatsapp.service');
+        await whatsappProvider.reset();
+
+        // Redireciona de volta para a tela de QR
+        return res.redirect('/api/whatsapp/qr');
+    } catch (error: any) {
+        return res.status(500).send(`Erro ao resetar: ${error.message}`);
     }
 });
 
