@@ -179,9 +179,9 @@ router.post('/whatsapp/pairing-code', async (req, res) => {
         await whatsappProvider.requestPairingCode(phone);
         
         // Redireciona de volta para a página que agora mostrará o código
-        res.redirect('/api/whatsapp/qr');
+        return res.redirect('/api/whatsapp/qr');
     } catch (error: any) {
-        res.status(500).send(`Erro ao gerar código: ${error.message}`);
+        return res.status(500).send(`Erro ao gerar código: ${error.message}`);
     }
 });
 
