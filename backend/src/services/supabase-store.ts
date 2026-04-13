@@ -99,7 +99,7 @@ export class SupabaseStore {
         }
     }
 
-    async extract(options: StoreOptions): Promise<void> {
+    async download(options: StoreOptions): Promise<void> {
         if (!process.env.SUPABASE_URL) return;
 
         const fileName = `${options.session}.zip`;

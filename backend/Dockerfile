@@ -1,23 +1,12 @@
+# Basic image for Node.js
 FROM node:20-slim
 
-# Install Chromium and dependencies for whatsapp-web.js
+# Install basic dependencies (Prisma needs openssl)
 RUN apt-get update && apt-get install -y \
-    chromium \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    libxss1 \
-    libatk-bridge2.0-0 \
-    libgtk-3-0 \
-    libnss3 \
-    libasound2 \
-    --no-install-recommends \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+WORKDIR /app
 
 WORKDIR /app
 
