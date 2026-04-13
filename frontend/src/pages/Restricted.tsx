@@ -6,7 +6,7 @@ import { agendaService } from '../services/agenda.service';
 export const Restricted: React.FC = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    
+
     const [appointments, setAppointments] = useState<any[]>([]);
     const hoje = new Date().toISOString().split('T')[0];
 
@@ -82,9 +82,9 @@ export const Restricted: React.FC = () => {
                         <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium">
                             👥 Gerenciar Clientes (Em Breve)
                         </button>
-                        <a 
-                            href={`${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001'}/api/whatsapp/qr`} 
-                            target="_blank" 
+                        <a
+                            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/whatsapp/qr`}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="block w-full text-left px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-medium text-green-700"
                         >
