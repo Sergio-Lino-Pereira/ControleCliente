@@ -49,8 +49,12 @@ class WhatsappServiceClass {
             // 0. Versão Automática
             const { version } = await fetchLatestBaileysVersion();
             console.log(`[WhatsappService] Protocolo WA: ${version.join('.')}`);
+
+            // 0.1 Baixar sessão do Supabase (para persistência entre deploys/reboots)
+            console.log('[WhatsappService] 📥 Tentando recuperar sessão do banco de dados...');
+            await store.download({ session: 'controle-cliente' });
             
-            // 1. Garantir que o diretório existe, mas NÃO limpar se já estiver inicializando ou tentando reconectar
+            // 1. Garantir que o diretório existe...
             // A limpeza agora é feita apenas em falhas críticas de autenticação (Status 401, 403, etc)
             await fs.ensureDir(AUTH_DIR);
 
