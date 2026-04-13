@@ -170,6 +170,21 @@ router.get('/whatsapp/qr', async (_req, res) => {
     `);
 });
 
+router.post('/whatsapp/pairing-code', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).send('Número de telefone é obrigatório.');
+
+    try {
+        const { whatsappProvider } = require('../services/whatsapp.service');
+        await whatsappProvider.requestPairingCode(phone);
+        
+        // Redireciona de volta para a página que agora mostrará o código
+        res.redirect('/api/whatsapp/qr');
+    } catch (error: any) {
+        res.status(500).send(`Erro ao gerar código: ${error.message}`);
+    }
+});
+
 // Rota de teste para enviar mensagens
 router.get('/whatsapp/test', (_req, res) => {
     res.send(`

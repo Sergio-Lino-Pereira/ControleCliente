@@ -82,6 +82,14 @@ export const Restricted: React.FC = () => {
                         <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium">
                             👥 Gerenciar Clientes (Em Breve)
                         </button>
+                        <a 
+                            href={`${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001'}/api/whatsapp/qr`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block w-full text-left px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-medium text-green-700"
+                        >
+                            📱 Conectar WhatsApp (QR ou Código)
+                        </a>
                     </div>
                 </div>
             </div>
